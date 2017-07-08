@@ -272,9 +272,10 @@ class CableUnit {
     }
   }
   
-  // Updates this cableunits neighbors that would affect this cable units state
+  // Updates this entire cableunits neighbors that would affect this cable units state
   private void updateStateNeighbors() {
     neighbors.clear();
+    int totalCalculations = 0;
     // First gather all neighbors for each cable cell part of this unit
     for (int i = 0; i < cables.size(); i ++) {
        CableCell c = cables.get(i);
@@ -295,7 +296,9 @@ class CableUnit {
             }
          }
        }
+       totalCalculations = cables.size() * (n.length * n.length);
     }
+    println("Total array checks: " + totalCalculations + ", cables: " + cables.size());
   }
   
   // Removes the cable from the cableunit if it is part of it

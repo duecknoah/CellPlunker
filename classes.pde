@@ -24,6 +24,41 @@ class Position {
    }
 }
 
+class CellUpdateInfo {
+  private Cell cell; // the position in the grid of the cell update
+  private short type; // type of update at pos
+  public final static short normalUpdate = 0;
+  public final static short placedNeighborUpdate = 1;
+  public final static short deletedNeighborUpdate = 2;
+  
+  CellUpdateInfo (Cell cell) {
+    this.cell = cell;
+  }
+  
+  // Sets the update type as a Normal Cell update
+  public void setTypeAsNormal() {
+    type = normalUpdate;
+  }
+  
+  public void setTypeAsPlacedNeighborUpdate() {
+    type = placedNeighborUpdate; 
+  }
+  
+  public void setTypeAsDeletedNeighborUpdate() {
+    type = deletedNeighborUpdate; 
+  }
+  
+  // Gets the update type
+  public short getType() {
+    return type; 
+  }
+  
+  // Gets the cell
+  public Cell getCell() {
+    return cell; 
+  }
+}
+
 // Holds all Cell data and functions to retrieve cell data
 class Grid {
    private final int xsize;
@@ -147,20 +182,21 @@ class Grid {
 // Holds all the data of which cells just updated, then marks all nearby cells
 // of the just updated cells to be updated 
 class StateUpdater {
-  private ArrayList<Cell> cellsUpdated; // cells just updated
-  private ArrayList<Cell> cellsToBeUpdated; // cells to be updated next step
-  private int stepsPerSec = 8; // number of steps per second
+  private HashMap<Position, Cell> cellsUpdated; // cells just updated
+  private HashMap<Position, Cell> cellsToBeUpdated; // cells to be updated next step
+  private int stepsPerSec = 60; // number of steps per second (def 8)
   private float stepTimer = 0;
   
   StateUpdater () {
-     cellsUpdated = new ArrayList<Cell>(); 
-     cellsToBeUpdated = new ArrayList<Cell>();
+     cellsUpdated = new HashMap<Position, Cell>(); 
+     cellsToBeUpdated = new HashMap<Position, Cell>();
   }
   
   // Marks cell as just updated to prevent from updating it again in the same step
   public void markCell(Cell pCell) {
-     if (!cellsUpdated.contains(pCell)) { // better optimize this!!!
-       cellsUpdated.add(pCell); 
+     // If this cell has not already been updated / marked
+     if (cellsUpdated.get(pCell.pos) == null) {
+       cellsUpdated.put(pCell.pos, pCell); 
      }
   }
   
@@ -169,8 +205,11 @@ class StateUpdater {
   public void markNearbyCellsNext(Cell pCell) {
     Cell[] n = pCell.getNeighbors();
     for (Cell i : n) {
-      if (!cellsToBeUpdated.contains(i)) { // better optimize this!!!
-        cellsToBeUpdated.add(i); 
+      // Prevent adding null cells to update next
+      if (i == null)
+        continue;
+      if (cellsToBeUpdated.get(i.pos) == null) {
+        cellsToBeUpdated.put(i.pos, i); 
       }
     }
   }
@@ -189,16 +228,18 @@ class StateUpdater {
   private void step() {
     cellsUpdated.clear();
     
-    ArrayList<Cell> toUpdate = new ArrayList<Cell>();
-    toUpdate.addAll(cellsToBeUpdated);
+    HashMap<Position, Cell> toUpdate = new HashMap<Position, Cell>(cellsToBeUpdated);
     cellsToBeUpdated.clear(); // clear, that way new things can be updated the next step
     
-    for (Cell c : toUpdate) {
-      if (c == null)
-        continue;
+    Iterator it = toUpdate.entrySet().iterator();
+    while(it.hasNext()) {
+      Map.Entry pair = (Map.Entry) it.next();
+      if (pair.getValue() == null)
+        continue; 
+      Cell c = (Cell) pair.getValue();
       c.update();
     }
-    println(toUpdate.size());
+    //println(toUpdate.size());
   }
 }
 
