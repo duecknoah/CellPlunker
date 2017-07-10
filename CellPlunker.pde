@@ -1,4 +1,6 @@
 import java.util.*;
+import java.awt.Toolkit;
+import java.awt.event.KeyEvent;
 /*
 CellPlunker
 A game where there is a grid of cells, every cell can have a state of either on or off. However, there are many different types
@@ -54,7 +56,7 @@ void keyPressed() {
    while(it.hasNext()) {
      Map.Entry pair = (Map.Entry) it.next();
      // If key currently pressed exists in the Keyboard Hashmap
-     if (Character.valueOf(key) == pair.getKey()) {
+     if ((Character.valueOf(Character.toLowerCase(key))) == pair.getKey()) {
        // Mark key as pressed  
        pair.setValue(true);
      }
@@ -75,6 +77,15 @@ void keyPressed() {
         toRotate.rotateLeft();
       }
     break;
+    case 'v':
+    case 'V':
+      if (blockSelectionUI.isOpened == false) {
+        Cell hovering = grid.cellAt(blockPlacementUI.previewBlock.pos);
+        if (hovering != null) {
+          println(hovering.toString()); // prints cell info
+        }
+      }
+    break;
    }
 }
 
@@ -83,7 +94,7 @@ void keyReleased() {
    while(it.hasNext()) {
      Map.Entry pair = (Map.Entry) it.next();
      // If key currently pressed exists in the Keyboard Hashmap
-     if (Character.valueOf(key) == pair.getKey()) {
+     if ((Character.valueOf(Character.toLowerCase(key))) == pair.getKey()) {
        // Mark key as pressed  
        pair.setValue(false);
        

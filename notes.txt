@@ -1,0 +1,38 @@
+a b	v c
+1 1     0 1
+0 0     0 0
+0 1     1 0
+1 0     1 0
+
+value !(a and b) or !(!a and !b) or (!a and b) or (a and !b)
+carry
+
+after
+
+value (xor gate)
+
+
+How updates should work:
+- There are different update types:
+state update
+cell update
+	cell placed
+	cell removed
+
+If a cell is placed, it will update its neighbors via a cell update
+If a cells state is changed, it will update its neighbors via a state update
+	to do this, that cell will mark its neighbors in the stateUpdater by making an instance of CellUpdateInfo in the updateNext array. That way when the stateupdater is going through the updates, it just cycles through the array, identifies the update type, and runs the appropriate update for that Cell.
+	This is done to ensure we are not running more code than we need to (ex. if there is a simple state update for a large cable, don't re-detect all neighboring non-cable cells, save that cpu intensive activity for when a new cell is placed or removed by it)
+
+
+CableCells
+	cellUpdate
+		cUnit.cellUpdate()
+	stateUpdate
+		cUnit.stateUpdate()
+CableUnit
+	cellUpdate()
+		update state neighbors
+		do everything the same as already in the update() event
+	stateUpdate()
+		do everything the same as the update() event, except do not update the stateneighbors

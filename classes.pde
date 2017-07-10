@@ -25,27 +25,30 @@ class Position {
 }
 
 class CellUpdateInfo {
+  // If a cell is placed, it will update its neighbors via a cell update
+  // If a cells state is changed, it will update its neighbors via a state update
   private Cell cell; // the position in the grid of the cell update
   private short type; // type of update at pos
-  public final static short normalUpdate = 0;
-  public final static short placedNeighborUpdate = 1;
-  public final static short deletedNeighborUpdate = 2;
+  public final static short stateUpdate = 0;
+  public final static short cellUpdate = 1;
+  
+  CellUpdateInfo (Cell cell, short type) {
+    this.cell = cell;
+    this.type = type; // cell update by default
+  }
   
   CellUpdateInfo (Cell cell) {
     this.cell = cell;
+    setTypeAsCellUpdate(); // cell update by default
   }
   
   // Sets the update type as a Normal Cell update
-  public void setTypeAsNormal() {
-    type = normalUpdate;
+  public void setTypeAsStateUpdate() {
+    type = stateUpdate;
   }
   
-  public void setTypeAsPlacedNeighborUpdate() {
-    type = placedNeighborUpdate; 
-  }
-  
-  public void setTypeAsDeletedNeighborUpdate() {
-    type = deletedNeighborUpdate; 
+  public void setTypeAsCellUpdate() {
+    type = cellUpdate; 
   }
   
   // Gets the update type
@@ -132,9 +135,7 @@ class Grid {
        return false; 
      }
      cells[pos.x][pos.y] = idToCell(id, pos);
-     cells[pos.x][pos.y].update();
-     stateUpdater.markCell(cells[pos.x][pos.y]);
-     stateUpdater.markNearbyCellsNext(cells[pos.x][pos.y]); // update neighbors
+     cells[pos.x][pos.y].intialize();
      return true;
    }
    
@@ -164,9 +165,8 @@ class Grid {
      if (cells[pos.x][pos.y] instanceof RotatableCell) {
        RotatableCell c = (RotatableCell) cells[pos.x][pos.y];
        c.setOrientation(orientation);
+       c.cellUpdate();
      }
-     stateUpdater.markCell(cells[pos.x][pos.y]);
-     stateUpdater.markNearbyCellsNext(cells[pos.x][pos.y]); // update neighbors
      return true;
    }
    
@@ -182,36 +182,42 @@ class Grid {
 // Holds all the data of which cells just updated, then marks all nearby cells
 // of the just updated cells to be updated 
 class StateUpdater {
-  private HashMap<Position, Cell> cellsUpdated; // cells just updated
-  private HashMap<Position, Cell> cellsToBeUpdated; // cells to be updated next step
-  private int stepsPerSec = 60; // number of steps per second (def 8)
+  // If a cell is placed, it will update its neighbors via a cell update
+  // If a cells state is changed, it will update its neighbors via a state update
+  private HashMap<Position, CellUpdateInfo> cellsUpdated; // cells just updated
+  private HashMap<Position, CellUpdateInfo> cellsToBeUpdated; // cells to be updated next step
+  private int stepsPerSec = 16; // number of steps per second (def 8)
   private float stepTimer = 0;
+  public int stepNum = 0; // REMOVE ME, ONLY HERE FOR TESTING PURPOSES
   
   StateUpdater () {
-     cellsUpdated = new HashMap<Position, Cell>(); 
-     cellsToBeUpdated = new HashMap<Position, Cell>();
+     cellsUpdated = new HashMap<Position, CellUpdateInfo>(); 
+     cellsToBeUpdated = new HashMap<Position, CellUpdateInfo>();
   }
   
   // Marks cell as just updated to prevent from updating it again in the same step
-  public void markCell(Cell pCell) {
+  // pCell (the cell to mark as updated)
+  // updateType (see the static final values via CellUpdateInfo.*)
+  public void markCell(Cell pCell, short updateType) {
      // If this cell has not already been updated / marked
      if (cellsUpdated.get(pCell.pos) == null) {
-       cellsUpdated.put(pCell.pos, pCell); 
+       cellsUpdated.put(pCell.pos, new CellUpdateInfo(pCell, updateType)); 
      }
   }
   
-  // Marks all nearby cells around pCell to be updated
-  // Next step
-  public void markNearbyCellsNext(Cell pCell) {
+  // Marks all nearby cells around pCell to be updated Next step
+  // pCell (the cell to mark as updated)
+  // updateType (see the static final values via CellUpdateInfo.*)
+  public void markNearbyCellsNext(Cell pCell, short updateType) {
     Cell[] n = pCell.getNeighbors();
     for (Cell i : n) {
       // Prevent adding null cells to update next
       if (i == null)
         continue;
       if (cellsToBeUpdated.get(i.pos) == null) {
-        cellsToBeUpdated.put(i.pos, i); 
+        cellsToBeUpdated.put(i.pos, new CellUpdateInfo(i, updateType)); 
       }
-    }
+    }    
   }
   
   public void update() {
@@ -228,7 +234,7 @@ class StateUpdater {
   private void step() {
     cellsUpdated.clear();
     
-    HashMap<Position, Cell> toUpdate = new HashMap<Position, Cell>(cellsToBeUpdated);
+    HashMap<Position, CellUpdateInfo> toUpdate = new HashMap<Position, CellUpdateInfo>(cellsToBeUpdated);
     cellsToBeUpdated.clear(); // clear, that way new things can be updated the next step
     
     Iterator it = toUpdate.entrySet().iterator();
@@ -236,10 +242,19 @@ class StateUpdater {
       Map.Entry pair = (Map.Entry) it.next();
       if (pair.getValue() == null)
         continue; 
-      Cell c = (Cell) pair.getValue();
-      c.update();
+      CellUpdateInfo cInfo = (CellUpdateInfo) pair.getValue();
+     // println(cInfo.getCell());
+      switch(cInfo.getType()) {
+        case CellUpdateInfo.cellUpdate:
+          cInfo.getCell().cellUpdate();
+        break;
+        case CellUpdateInfo.stateUpdate:
+          cInfo.getCell().stateUpdate();
+        break;
+        default: throw new IllegalArgumentException("Unknown update type: " + cInfo.getType());
+      }
     }
-    //println(toUpdate.size());
+    stepNum ++;
   }
 }
 
@@ -337,7 +352,6 @@ class BlockPlacementUI {
         if (mouseButton == RIGHT) {
           Cell blockToRemove = grid.cellAt(previewBlock.pos);
           if (blockToRemove != null) {
-            stateUpdater.markNearbyCellsNext(blockToRemove); // update neighbors next step
             grid.clearCell(blockToRemove.pos);
           }
         }
@@ -376,16 +390,16 @@ class Camera {
          moveSpd = 1; 
       }
       
-      if (Keyboard.keys.get('w') == true) {
+      if (Keyboard.keys.get('w')) {
          pos.y -= moveSpd; 
       }
-      if (Keyboard.keys.get('a') == true) {
+      if (Keyboard.keys.get('a')) {
          pos.x -= moveSpd; 
       }
-      if (Keyboard.keys.get('s') == true) {
+      if (Keyboard.keys.get('s')) {
          pos.y += moveSpd; 
       }
-      if (Keyboard.keys.get('d') == true) {
+      if (Keyboard.keys.get('d')) {
          pos.x += moveSpd; 
       }
       

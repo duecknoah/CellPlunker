@@ -7,7 +7,6 @@ abstract class Cell {
   
   Cell (Position pos) {
    this.pos = pos; 
-   stateUpdater.markNearbyCellsNext(this);
   }
   
   // copy constructor
@@ -20,8 +19,8 @@ abstract class Cell {
   public void setState(boolean newState) {
      if (state != newState) {
        state = newState;
-       stateUpdater.markCell(this);
-       stateUpdater.markNearbyCellsNext(this);
+       stateUpdater.markCell(this, CellUpdateInfo.stateUpdate);
+       stateUpdater.markNearbyCellsNext(this, CellUpdateInfo.stateUpdate);
      }
   }
   
@@ -36,7 +35,6 @@ abstract class Cell {
      neighbors[1] = grid.cellAt(new Position(this.pos.x, this.pos.y - 1)); // UP
      neighbors[2] = grid.cellAt(new Position(this.pos.x - 1, this.pos.y)); // LEFT
      neighbors[3] = grid.cellAt(new Position(this.pos.x, this.pos.y + 1)); // DOWN
-     //println(pos);
      return neighbors;
   }
   
@@ -73,8 +71,15 @@ abstract class Cell {
     rect(pos.x, pos.y, 1, 1);
   }
   
-  // Update for cells
-  public abstract void update();
+  // Used to intialize cell once fully placed on board, this is done
+  // to prevent doing checks in the constructor before placement when using functions like idToCell()
+  public abstract void intialize();
+  
+  // Update for when a neighboring cell is placed
+  public abstract void cellUpdate();
+  
+  // State update for when a neighboring cell that could affect this one has a state change
+  public abstract void stateUpdate();
   
   // Draws the state (black or white) (on or off)
   public void drawState() {
@@ -89,6 +94,10 @@ abstract class Cell {
     if (grid.cellAt(pos) == null) {
       draw();
     }
+  }
+  
+  public String toString() {
+    return "Cell type: " + this.getClass().getName() + ", Position: " + pos.toString() + ", state: " + state;
   }
 }
 
@@ -198,8 +207,6 @@ class ConstantCell extends Cell {
   public final static int labelCol = #001eff;
   ConstantCell(Position pos) {
      super(pos);
-     state = true;
-     stateUpdater.markNearbyCellsNext(this);
   }
   
   @Override
@@ -208,8 +215,20 @@ class ConstantCell extends Cell {
      throw new IllegalArgumentException("Cannot set the state of a constant cell!");
   }
   
-  public void update() {
-    // do nothing 
+  @Override
+  public void intialize() {
+    state = true;
+    stateUpdater.markNearbyCellsNext(this, CellUpdateInfo.cellUpdate); 
+  }
+  
+  @Override
+  public void stateUpdate() {};
+  @Override
+  public void cellUpdate() {};
+  
+  @Override
+  public void delete() {
+    stateUpdater.markNearbyCellsNext(this, CellUpdateInfo.cellUpdate);
   }
   
   // Draws the colored label that represents this cell
@@ -226,10 +245,15 @@ class SwitchCell extends Cell {
    SwitchCell (Position pos) {
       super(pos);
    }
-   
-  public void update() {
-    // do nothing 
+  
+  @Override
+  public void intialize() {
+    stateUpdater.markNearbyCellsNext(this, CellUpdateInfo.cellUpdate);
   }
+  @Override
+  public void stateUpdate() {};
+  @Override
+  public void cellUpdate() {};
   
   // Draws the colored label that represents this cell
   public void draw() {
@@ -253,8 +277,11 @@ class CableUnit {
     this.neighbors = new ArrayList<Cell>();
   }
   
-  public void update() {
-    updateStateNeighbors();
+  // type (short) - see CellUpdateInfo.* for update types
+  public void update(short type) {
+    // If a cell update was detected, then re-update neighbors
+    if (type == CellUpdateInfo.cellUpdate)
+      updateStateNeighbors();
     boolean finalState = false;
     
     // If any of the neighboring cells have an on state, this entire cable
@@ -285,12 +312,12 @@ class CableUnit {
        for (Cell j : n) {
          if (j != null) {
             if (!(j instanceof CableCell)) {
-              if (!neighbors.contains(j)) {
+              if (!neighbors.contains(j)) { // optimize
                 neighbors.add(j);
               }
             }
             else {
-              if (!cables.contains(j)) {
+              if (!cables.contains(j)) { // optimize
                 cables.add((CableCell) j);
               }
             }
@@ -298,7 +325,7 @@ class CableUnit {
        }
        totalCalculations = cables.size() * (n.length * n.length);
     }
-    println("Total array checks: " + totalCalculations + ", cables: " + cables.size());
+    println("Total array checks: " + totalCalculations + ", cables: " + cables.size() + ", " + stateUpdater.stepNum);
   }
   
   // Removes the cable from the cableunit if it is part of it
@@ -318,6 +345,10 @@ class CableUnit {
       i.setCableUnit(newCu); 
     }
   }
+  
+  public String toString() {
+    return "Total cables: " + cables.size() + ", Total neighbors: " + neighbors.size(); 
+  }
 }
 
 // if any of the cells around it are in an 'on' state, its state is on, otherwise its state is off
@@ -327,11 +358,28 @@ class CableCell extends Cell {
   
   CableCell(Position pos) {
      super(pos); 
-     detectCableUnit();
   }
   
-  public void update() {
-     cUnit.update(); // update the entire cable unit which is therefore also updating this
+  @Override
+  public void intialize() {
+    detectCableUnit();
+    cellUpdate();
+  }
+  
+  @Override
+  public void cellUpdate() {
+     cUnit.update(CellUpdateInfo.cellUpdate); // update the entire cable unit neighbors and then state, which is therefore also updating this
+  }
+  
+  @Override
+  public void stateUpdate() {
+    cUnit.update(CellUpdateInfo.stateUpdate); // update the entire cable unit's state which is therefore also updating this
+  }
+  
+  @Override
+  public void delete() {
+    // Remove self from cable unit
+    cUnit.removeFromUnit(this);
   }
   
   // Checks to see if there is an existing cable unit that this
@@ -344,7 +392,6 @@ class CableCell extends Cell {
       if (i instanceof CableCell) {
        CableCell i2 = (CableCell) i;
        this.cUnit = i2.getCableUnit();
-       update();
        return;
       }
     }
@@ -353,7 +400,6 @@ class CableCell extends Cell {
     ArrayList<CableCell> cables = new ArrayList<CableCell>();
     cables.add(this);
     cUnit = new CableUnit(cables);
-    update();
   }
   
   public void setCableUnit(CableUnit cUnit) {
@@ -364,17 +410,16 @@ class CableCell extends Cell {
    return this.cUnit; 
   }
   
-  @Override
-  public void delete() {
-    // Remove self from cable unit
-    cUnit.removeFromUnit(this);
-  }
-  
   // Draws the colored label that represents this cell
   public void draw() {
     fill(labelCol);
     noStroke();
     rect(pos.x, pos.y, 1, 1);
+  }
+  
+  @Override
+  public String toString() {
+    return super.toString() + ", CableUnit data: {" + cUnit.toString() + "}"; 
   }
 }
 
@@ -385,15 +430,27 @@ class InverterCell extends RotatableCell implements Moveable {
      super(pos); 
   }
   
-  public void update() {
+  @Override
+  public void intialize() {
+    cellUpdate(); 
+  }
+  
+  @Override
+  public void cellUpdate() {
      boolean sumState = true; // the sum state of all of the surrounding cells, if one cell is true, then the sum state will be false
 
      Cell cellInput = getCellBehind();
      if (cellInput == null) {
-       setState(false);
+       setState(true);
        return;
      }
      sumState = (cellInput.getState()) ? false : sumState;
      setState(sumState);
+  }
+  
+  @Override
+  public void stateUpdate() {
+   //TODO 
+   cellUpdate(); // just do the same as the cellUpdate for now
   }
 }
