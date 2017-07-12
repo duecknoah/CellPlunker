@@ -21,11 +21,14 @@ cell update
 
 If a cell is placed, it will update its neighbors via a cell update
 If a cells state is changed, it will update its neighbors via a state update
+
 	to do this, that cell will mark its neighbors in the stateUpdater by making an instance of CellUpdateInfo in the updateNext array. That way when the stateupdater is going through the updates, it just cycles through the array, identifies the update type, and runs the appropriate update for that Cell.
 	This is done to ensure we are not running more code than we need to (ex. if there is a simple state update for a large cable, don't re-detect all neighboring non-cable cells, save that cpu intensive activity for when a new cell is placed or removed by it)
 
 
 CableCells
+	initialize
+	    cUnit.initialize()
 	cellUpdate
 		cUnit.cellUpdate()
 	stateUpdate
@@ -36,3 +39,44 @@ CableUnit
 		do everything the same as already in the update() event
 	stateUpdate()
 		do everything the same as the update() event, except do not update the stateneighbors
+
+lags around 350
+
+CableCell placing pseudo code (this code involves the process of solving connecting cableunit's conflicts):
+{
+when a cablecell is placed
+	Put neighbors in an array called 'n'
+	Put neighbors's cableUnits in an array called 'nCableUnit'
+	loop through 'nCableUnit'
+		for integer i=0 < 4
+			for integer j=i+1 < 4
+				if nCableUnit[i] == nCableUnit[j] // if two different neighbors share the same cableUnit, make one of the references null, as we don't want to recount the same cableunit
+					nCableUnit[i] = null
+					j = 3; // makes i go onto the next one, as there is no point in comparing j with i since it i is now null
+
+	for i in 'nCableUnit'
+		if (i == null)
+			continue
+		if we are not currently in a cableUnit
+			join cableunit i
+		else
+			this.cableUnit.merge(i); // Combine this cableCell's cableUnit with i's
+}
+
+CableUnit merge function pseudo code:
+{
+	function merge(CableUnit other) {
+		if (this == other)
+			throw an Exception saying "You cannot merge two of the same CableUnits!"
+		// Make all of the cables about to be added to have their cUnit reference refer to this cable unit
+		for (i in other.cables)
+			i.cUnit = this;
+		this.neighbors.addAll(other.neighbors);
+		this.cables.addAll(other.cables);
+	}
+}
+
+CableCell deleting pseudo code
+{
+	
+}

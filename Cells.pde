@@ -296,6 +296,7 @@ class CableUnit {
     // Lastly update the entire cables state
     for (CableCell c : cables) {
       c.setState(finalState);
+      stateUpdater.markCell(c, CellUpdateInfo.stateUpdate);
     }
   }
   
@@ -325,7 +326,7 @@ class CableUnit {
        }
        totalCalculations = cables.size() * (n.length * n.length);
     }
-    println("Total array checks: " + totalCalculations + ", cables: " + cables.size() + ", " + stateUpdater.stepNum);
+    //println("Total array checks: " + totalCalculations + ", cables: " + cables.size() + ", " + stateUpdater.stepNum);
   }
   
   // Removes the cable from the cableunit if it is part of it
@@ -333,17 +334,14 @@ class CableUnit {
     cables.remove(c); 
   }
   
-  // divides this cable unit into two. Where this unit will only have whats leftover
-  // and the new CableUnit will only have otherCables. This is done when cableCells are
-  // removed and it splits the cable into two different parts
-  public void splitCableUnit(ArrayList<CableCell> otherCables) {
-    cables.removeAll(otherCables);
-    CableUnit newCu = new CableUnit(otherCables);
-    
-    // Update all of the CableCells to point to this CableUnit
-    for (CableCell i : otherCables) {
-      i.setCableUnit(newCu); 
-    }
+  public void merge(CableUnit other) {
+    if (this == other)
+      throw new IllegalArgumentException("You cannot merge two of the same CableUnits!");
+    // Make all of the cables about to be added to have their cUnit reference refer to this cable unit
+    for (CableCell i : other.cables)
+      i.cUnit = this;
+    this.neighbors.addAll(other.neighbors);
+    this.cables.addAll(other.cables);
   }
   
   public String toString() {
@@ -386,20 +384,42 @@ class CableCell extends Cell {
   // is connected to, if not, a new cable unit will be created
   public void detectCableUnit() {
     Cell[] n = getNeighbors();
-    // Loop through neighbors, if one of them is a CableCell, then
-    // join their cableUnit
-    for (Cell i : n) {
-      if (i instanceof CableCell) {
-       CableCell i2 = (CableCell) i;
-       this.cUnit = i2.getCableUnit();
-       return;
+    CableUnit[] nCableUnit = new CableUnit[4];
+    // Put neighbors's cableunits in an array called 'nCableUnit'
+    for (int i = 0; i < 4; i ++) {
+      if (n[i] instanceof CableCell) {
+        CableCell i2 = (CableCell) n[i];
+        nCableUnit[i] = i2.getCableUnit();
       }
     }
+    
+    // loop through 'nCableUnit'
+    for (int i = 0; i < 4; i ++) {
+      for (int j = i+1; j < 4; j ++) {
+         if (nCableUnit[i] == nCableUnit[j]) { // if two different neighbors share the same cableUnit, make one of the references null, as we don't want to recount the same cableunit
+           nCableUnit[i] = null;
+           j = 4; // makes i go onto the next one, as there is no point in comparing j with i since it i is now null
+         }
+      }
+    }
+    
+    for (CableUnit i : nCableUnit) {
+       if (i == null)
+         continue;
+       if (cUnit == null) // if we are not currently in a cableUnit
+         cUnit = i;
+       else {
+         cUnit.merge(i); 
+       }
+    }
+    
     // otherwise, create a new cable unit and make this cablecell
     // a part of it
-    ArrayList<CableCell> cables = new ArrayList<CableCell>();
-    cables.add(this);
-    cUnit = new CableUnit(cables);
+    if (cUnit == null) {
+      ArrayList<CableCell> cables = new ArrayList<CableCell>();
+      cables.add(this);
+      cUnit = new CableUnit(cables);
+    }
   }
   
   public void setCableUnit(CableUnit cUnit) {
