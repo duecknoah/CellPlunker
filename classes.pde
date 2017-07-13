@@ -221,12 +221,20 @@ class StateUpdater {
   }
   
   public void update() {
+    /*
     if (stepTimer > frameRate / stepsPerSec) {
       step();
       stepTimer = 0;
     }
     else {
       stepTimer ++; 
+    }
+    */
+    int i = 0;
+    int maxSteps = 16;
+    while(stateUpdater.cellsToBeUpdated.size() > 0 && i < maxSteps) {
+      step(); 
+      i ++;
     }
   }
   
