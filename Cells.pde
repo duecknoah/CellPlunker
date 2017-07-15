@@ -550,3 +550,26 @@ class InverterCell extends RotatableCell implements Moveable {
    cellUpdate(); // just do the same as the cellUpdate for now
   }
 }
+
+class WirelessCableCell extends CableCell {
+  
+  public final static int labelCol = #ffee7f;
+  public final static int markerCol = #ff0000;
+  private WirelessCableCell other; // the Wireless cable cell this is linked with
+  
+  WirelessCableCell (Position pos) {
+    super(pos); 
+    other = null;
+  }
+  
+  @Override
+  public void draw() {
+    fill(labelCol);
+    noStroke();
+    rect(pos.x, pos.y, 1, 1);
+    fill(markerCol);
+    ellipse(pos.x + 0.5, pos.y + 0.5, 0.5, 0.5);
+    if (other != null)
+      line(pos.x, pos.y, other.pos.x, other.pos.y);
+  }
+}
