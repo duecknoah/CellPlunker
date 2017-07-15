@@ -147,6 +147,8 @@ class Grid {
        return false; 
      }
      cells[pos.x][pos.y].delete(); // prepare cell for deletion
+     // remove any updates involved with this cell from the stateUpdater, as we don't want to update a null Cell!
+     stateUpdater.unmarkCellNext(cells[pos.x][pos.y]);
      cells[pos.x][pos.y] = null; // clear cell from grid
      return true;
    }
@@ -218,6 +220,12 @@ class StateUpdater {
         cellsToBeUpdated.put(i.pos, new CellUpdateInfo(i, updateType)); 
       }
     }    
+  }
+  
+  // This will unmark a cell that has been marked to be updated next step. This is run
+  // When a cell that is marked to be updated next gets deleted.
+  public void unmarkCellNext(Cell pCell) {
+    cellsToBeUpdated.remove(pCell);
   }
   
   public void update() {

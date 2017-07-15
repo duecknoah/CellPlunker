@@ -437,11 +437,15 @@ class CableCell extends Cell {
   
   @Override
   public void cellUpdate() {
-     cUnit.update(CellUpdateInfo.cellUpdate); // update the entire cable unit neighbors and then state, which is therefore also updating this
+    if (cUnit == null)
+      return;
+    cUnit.update(CellUpdateInfo.cellUpdate); // update the entire cable unit neighbors and then state, which is therefore also updating this
   }
   
   @Override
   public void stateUpdate() {
+    if (cUnit == null)
+      return;
     cUnit.update(CellUpdateInfo.stateUpdate); // update the entire cable unit's state which is therefore also updating this
   }
   
