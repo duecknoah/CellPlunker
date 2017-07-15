@@ -7,11 +7,11 @@ import java.util.AbstractQueue;
 CellPlunker
 A game where there is a grid of cells, every cell can have a state of either on or off. However, there are many different types
 of cells that will act differently and make there state or other custom properties change accordinly based on its surroundings or type of cell it is. This allows you to create
-interesting and complex systems
+interesting and complex logical systems
 
 cell types:
 static
-  swsitch cell (can be turned on or off)
+  switch cell (can be turned on or off)
   constant cell (is stuck on)
 dynamic
   //attracter cell (attracts nearby dynamic cells)
