@@ -96,6 +96,8 @@ abstract class Cell {
     }
     else {
       stroke(#000000);
+      if (grid.cellAt(this.pos) instanceof Interactable)
+        stroke(#66ff66);
       strokeWeight(0.15);
       noFill();
       rect(pos.x, pos.y, 1, 1); 
@@ -246,8 +248,12 @@ class ConstantCell extends Cell {
   }
 }
 
+interface Interactable {
+  public void interact();
+}
+
 // A static cell that can be turned on or off
-class SwitchCell extends Cell {
+class SwitchCell extends Cell implements Interactable {
    public final static int labelCol = #7f8eff;
    SwitchCell (Position pos) {
       super(pos);
@@ -262,16 +268,17 @@ class SwitchCell extends Cell {
   @Override
   public void cellUpdate() {};
   
+  // Interacting with this inverts the state
+  public void interact() {
+    setState(!getState()); 
+  }
+  
   // Draws the colored label that represents this cell
   public void draw() {
     fill(labelCol);
     noStroke();
     rect(pos.x, pos.y, 1, 1);
   }
-}
-
-interface Moveable {
-  public Position posPrev = null; 
 }
 
 // Holds all data for a connected unit of cable cells, this way they update together.
@@ -527,7 +534,7 @@ class CableCell extends Cell {
 }
 
 // if any of the cells around it are in an 'on' state, its state is off, otherwise its state is on
-class InverterCell extends RotatableCell implements Moveable {
+class InverterCell extends RotatableCell {
   
   InverterCell(Position pos) {
      super(pos); 
@@ -577,6 +584,49 @@ class WirelessCableCell extends CableCell {
     fill(markerCol);
     ellipse(pos.x + 0.5, pos.y + 0.5, 0.5, 0.5);
     if (other != null)
-      line(pos.x, pos.y, other.pos.x, other.pos.y);
+      drawConnectionLine(this.pos, other.pos);
+  }
+  
+  public void drawConnectionLine(Position posStart, Position posEnd) {
+    line(posStart.x, posStart.y, posEnd.x, posEnd.y);
+  }
+  
+  // Establishes a connection between this and another WirelessCable Cell
+  public void connectTo(WirelessCableCell other) {
+    // Remove any existing connection from other before connecting to other
+    if (other.hasConnection()) {
+      other.disconnect(); 
+    }
+    if (this.hasConnection()) {
+     this.disconnect();
+    }
+    // Connect both WirelessCableCells to each other
+    this.connectToOther(other);
+    other.connectToOther(this);
+  }
+  
+  // Connects this to the other WirelessCableCell, but NOT the other way around. Use connectTo() to establish a proper connection!
+  public void connectToOther(WirelessCableCell other) {
+     this.other = other;
+  }
+  
+  // Retuns true if there is a connection currently with another WirelessCableCell
+  public boolean hasConnection() {
+    if (other != null)
+      return true;
+    return false;
+  }
+  
+  // Removes the connection from both other and this.
+  public void disconnect() {
+    if (other != null) {
+      other.disconnectFromOther(); // disconnect other from this
+      disconnectFromOther(); // disconnect this from other
+    }
+  }
+  
+  // Removes the connection via THIS END ONLY, use disconnect() to have both WirelessCableCells be disconnected from each other 
+  public void disconnectFromOther() {
+    other = null; 
   }
 }

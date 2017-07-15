@@ -338,7 +338,7 @@ class BlockSelectionUI {
      textSize(12);
   }
 }
-// UI for block placement
+// UI for block placement and interaction
 class BlockPlacementUI {
   
   Cell previewBlock = idToCell(0, new Position(0, 0)); // the block to preview placing
@@ -363,6 +363,17 @@ class BlockPlacementUI {
             grid.clearCell(blockToRemove.pos);
           }
         }
+      }
+      if (keyPressed) {
+        // Cell interaction
+        if (key == 'c' || key == 'C') {
+          Cell c = grid.cellAt(previewBlock.pos);
+            if (c instanceof Interactable) {
+              Interactable i = (Interactable) c;
+              i.interact();
+            }
+        }
+        keyPressed = false; 
       }
     }
     this.draw();
