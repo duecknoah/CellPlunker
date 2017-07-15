@@ -94,6 +94,13 @@ abstract class Cell {
     if (grid.cellAt(pos) == null) {
       draw();
     }
+    else {
+      stroke(#000000);
+      strokeWeight(0.15);
+      noFill();
+      rect(pos.x, pos.y, 1, 1); 
+      noStroke();
+    }
   }
   
   public String toString() {
