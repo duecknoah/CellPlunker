@@ -1,6 +1,8 @@
 import java.util.*;
 import java.awt.Toolkit;
 import java.awt.event.KeyEvent;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.AbstractQueue;
 /*
 CellPlunker
 A game where there is a grid of cells, every cell can have a state of either on or off. However, there are many different types
@@ -27,28 +29,10 @@ BlockSelectionUI blockSelectionUI = new BlockSelectionUI();
 void setup() {
   size(500, 500);
   noSmooth();
-  
-  /*
-  for (int ix = 0; ix < grid.xsize; ix ++) {
-     for (int iy = 0; iy < grid.ysize; iy ++) {
-        if (random(1) < 0.5) {
-        grid.cells[ix][iy] = new SwitchCell(new Position(ix, iy)); 
-        grid.cells[ix][iy].setState((random(1) < 0.5) ? true : false);
-        }
-     }
-  }
-  */
   Keyboard.keys.put('w', false);
   Keyboard.keys.put('a', false);
   Keyboard.keys.put('s', false);
   Keyboard.keys.put('d', false);
-  /*
-  for (int ix=0; ix<grid.xsize; ix ++) {
-    for (int iy=0; iy<grid.ysize; iy ++) {
-      grid.placeCell(0, new Position(ix, iy)); 
-    }
-  }
-  */
 }
 
 void keyPressed() {

@@ -143,7 +143,7 @@ class Grid {
    // returns true - succesful
    // returns false - failed to clear cell
    public boolean clearCell(Position pos) {
-     if (inBounds(pos) == false) {
+     if (cellAt(pos) == null) {
        return false; 
      }
      cells[pos.x][pos.y].delete(); // prepare cell for deletion

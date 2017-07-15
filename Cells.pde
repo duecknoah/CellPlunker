@@ -269,7 +269,7 @@ interface Moveable {
 
 // Holds all data for a connected unit of cable cells, this way they update together.
 class CableUnit {
-  private ArrayList<CableCell> cables; // the cable cells that form this cable unit 
+  public ArrayList<CableCell> cables; // the cable cells that form this cable unit 
   private ArrayList<Cell> neighbors; // neighboring cells that are touching this cable unit
   
   CableUnit (ArrayList<CableCell> cables) {
@@ -326,12 +326,83 @@ class CableUnit {
        }
        totalCalculations = cables.size() * (n.length * n.length);
     }
-    //println("Total array checks: " + totalCalculations + ", cables: " + cables.size() + ", " + stateUpdater.stepNum);
   }
   
   // Removes the cable from the cableunit if it is part of it
   public void removeFromUnit(CableCell c) {
-    cables.remove(c); 
+    Cell[] neighbors = c.getNeighbors();
+    CableCell[] cableNeighbors = new CableCell[4];
+    int index = 0;
+    
+    // remove this Cable from this CableUnit
+    cables.remove(c);
+    
+    // Get CableCell neighbors and put them in an array
+    for (Cell i : neighbors) {
+      if (i instanceof CableCell) {
+        cableNeighbors[index] = (CableCell) i;
+      }
+      else {
+        cableNeighbors[index] = null; 
+      }
+      index ++;
+    }
+    
+    // For each CableCell Neighbor, Reset the entire connected CableUnit and set each of the connected CableCells to have a null CableUnit (this we be assigned soon).
+    for (CableCell i : cableNeighbors) {
+      if (i == null)
+        continue;
+      if (i.getCableUnit() != null) {
+        for (CableCell i2 : i.getCableUnit().cables) {
+          i2.cUnit = null; 
+        }
+      }
+      // Then give the neighbors a new CableUnit each
+      ArrayList<CableCell> cables = new ArrayList<CableCell>();
+      cables.add(i);
+      i.cUnit = new CableUnit(cables); 
+    }
+    
+    // Next, Follow the path of cables from each neighbor, adding them to that neighbors CableUnit only if the cable has not been assigned a CableUnit
+    for (CableCell i : cableNeighbors) {
+      if (i == null)
+        continue;
+      // Do not set this CableUnit up as it is already set up (more than one cable connected)
+      if (i.getCableUnit().cables.size() > 1)
+        continue;
+      
+      Queue<CableCell> nextCableCell = new LinkedBlockingQueue<CableCell>();
+      CableUnit iCableUnit = i.getCableUnit();
+      nextCableCell.add(i); // starting node / cell
+      
+      while (!nextCableCell.isEmpty()) {
+        CableCell current = nextCableCell.poll();
+        Cell[] currentN = current.getNeighbors();
+        
+        for (Cell i2 : currentN) {
+          if (i2 instanceof CableCell) {
+            CableCell i3 = (CableCell) i2;
+            // Do not add the cable we are trying to remove!
+            if (i3 == c)
+              continue;
+            // If neighbor of current is not already checked, then add it to the queue
+            if (!iCableUnit.cables.contains(i3)) {
+              nextCableCell.add((CableCell) i3);
+              if (System.nanoTime() % 100000 == 0) {
+              }
+            }
+          }
+        }
+        // Finally, mark this cell as checked while adding it to the CableUnit if it is not in another CableUnit
+        iCableUnit.cables.add(current);
+        current.cUnit = iCableUnit;
+      }
+    }
+    // Lastly, redetect the cable unit's state neighbors
+    for (CableCell i : cableNeighbors) {
+      if (i == null)
+        continue;
+    }
   }
   
   public void merge(CableUnit other) {
@@ -378,6 +449,7 @@ class CableCell extends Cell {
   public void delete() {
     // Remove self from cable unit
     cUnit.removeFromUnit(this);
+    stateUpdater.markNearbyCellsNext(this, CellUpdateInfo.cellUpdate);
   }
   
   // Checks to see if there is an existing cable unit that this

@@ -76,7 +76,73 @@ CableUnit merge function pseudo code:
 	}
 }
 
-CableCell deleting pseudo code
+CableCell deleting pseudo code (this is run before the cell is actually removed from the grid)
 {
+	this.cUnit.removeFromUnit(this);
+}
+
+CableUnit removing a CableCell from unit
+function removeFromUnit(CableCell c) {
+
+	Put neighbors in an array called 'n'
+	Put CableCell neighbors in an array called 'cableNeighbors'
+	Create an array of size 6 called 'connectedNeighbors'
+
+
+	//////////////////////////// IDEA 1 ////////////////////////////////
+	Make each cableNeighbor have a new CableUnit
+		Get every connected CableCell and add it to the cables of this CableUnit
 	
+	// Find out which neighbors have a cablepath connecting to every other neighbor, if they are connected, then make the two cableUnits the same. We do not merge as the CableCell's are all the same, this would create duplicates if we merged.
+	loop through 'cableNeighbors'
+		for integer i=0 < 4
+			for integer j=i+1 < 4
+				if (i == null || j == null)
+					continue;
+				CableUnit iC = cableNeighbors[i].getCableUnit();
+				CableUnit jC = cableNeighbors[j].getCableUnit();
+				if (iC.contains(cableNeighbors[j]))
+					iC.merge(jC);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	//////////////////////////// IDEA 2 ////////////////////////////////
+	// Find out which neighbors have a cablepath connecting to every other neighbor
+	loop through 'cableNeighbors'
+		for integer i=0 < 4
+			for integer j=i+1 < 4
+				Put traced paths (ArrayLists) for each cableNeighbor in the connectedNeighbors array (to trace path, use A* algorithm, see https://www.youtube.com/watch?v=-L-WgKMFuhE)
+
+	// Layout of connectedNeighbors boolean array, where it is true if those two neighbors
+	// are connected via a CableCell path
+	// R = RIGHT
+	// T = TOP
+	// L = LEFT
+	// B = BOTTOM
+	// {
+	// [R-T],[R-L],[R-B],[T-L],[T-B],[L-B]
+	// }
+
+	for each connected neighbor in 'connectedNeighbors'	
+		if they are not already part of the same CableUnit
+			merge there two CableUnits
+	for each 
+
+	cables.remove(c);
 }
