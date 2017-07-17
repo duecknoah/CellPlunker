@@ -10,6 +10,8 @@ public Cell idToCell(int id, Position pos) {
       return new CableCell(pos);
     case 3:
       return new InverterCell(pos);
+    case 4:
+      return new WirelessCableCell(pos);
     default:
       return null;
   }
@@ -21,8 +23,11 @@ public int cellToId(Cell c) {
     return 0;
   if (c instanceof SwitchCell)
     return 1;
-  if (c instanceof CableCell)
+  if (c instanceof CableCell) {
+    if (c instanceof WirelessCableCell)
+      return 4;
     return 2;
+  }
   if (c instanceof InverterCell)
     return 3;
   return -1;
@@ -38,6 +43,8 @@ public String idToCellName(int id) {
       return "Cable Cell";
     case 3:
       return "Inverter Cell";
+    case 4:
+      return "WirelessCable Cell";
     default:
       return "?";
   }

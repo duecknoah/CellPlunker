@@ -143,10 +143,12 @@ class Grid {
    // returns true - succesful
    // returns false - failed to clear cell
    public boolean clearCell(Position pos) {
-     if (inBounds(pos) == false) {
+     if (cellAt(pos) == null) {
        return false; 
      }
      cells[pos.x][pos.y].delete(); // prepare cell for deletion
+     // remove any updates involved with this cell from the stateUpdater, as we don't want to update a null Cell!
+     stateUpdater.unmarkCellNext(cells[pos.x][pos.y]);
      cells[pos.x][pos.y] = null; // clear cell from grid
      return true;
    }
@@ -218,6 +220,18 @@ class StateUpdater {
         cellsToBeUpdated.put(i.pos, new CellUpdateInfo(i, updateType)); 
       }
     }    
+  }
+  
+  // Marks an individual cell to update next step
+  public void markCellNext(Cell pCell, short updateType) {
+    if (cellsToBeUpdated.get(pCell.pos) == null)
+      cellsToBeUpdated.put(pCell.pos, new CellUpdateInfo(pCell, updateType));
+  }
+  
+  // This will unmark a cell that has been marked to be updated next step. This is run
+  // When a cell that is marked to be updated next gets deleted.
+  public void unmarkCellNext(Cell pCell) {
+    cellsToBeUpdated.remove(pCell);
   }
   
   public void update() {
@@ -338,10 +352,11 @@ class BlockSelectionUI {
      textSize(12);
   }
 }
-// UI for block placement
+// UI for block placement and interaction
 class BlockPlacementUI {
   
   Cell previewBlock = idToCell(0, new Position(0, 0)); // the block to preview placing
+  Interactable currentInteract = null; // current Cell being interacted with
   
   public void update() {
     // Allow placement if user is holding a block, and draw a preview of what it
@@ -364,6 +379,43 @@ class BlockPlacementUI {
           }
         }
       }
+      boolean isInteracting = (currentInteract == null) ? false : true;
+      if (keyPressed) {
+        // Cell interaction
+        if (key == 'c' || key == 'C') {
+          Cell c = grid.cellAt(previewBlock.pos);
+            if (c instanceof Interactable) {
+              Interactable i = (Interactable) c;
+              // If not currently interacting
+              if (!isInteracting) {
+                i.interact(); // interact!
+                // Now check if that Interactable is done being interacted with, if so. End interaction
+                if (i.isBeingInteracted()) {
+                  currentInteract = i;
+                }
+                else isInteracting = false;
+              }
+              else {
+                // If we are currently interacting and we are selecting another Interactable,
+                // then attempt to make them interact together (most of the time this will do nothing)
+                currentInteract.interactWith(i);
+              }
+            }
+            else if (isInteracting) { // end interaction when trying to interact with a Cell that isn't interactable or a null Cell
+              isInteracting = false; 
+            }
+        }
+        // If we are interacting, but the current interact object is mnarked as no longer being
+        // interacted with, then reset our current interact
+        if (isInteracting) {
+          if (!currentInteract.isBeingInteracted()) {
+            currentInteract = null;
+          }
+        }
+        keyPressed = false; 
+      }
+      
+      
     }
     this.draw();
   }

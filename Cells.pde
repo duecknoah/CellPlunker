@@ -94,6 +94,15 @@ abstract class Cell {
     if (grid.cellAt(pos) == null) {
       draw();
     }
+    else {
+      stroke(#000000);
+      if (grid.cellAt(this.pos) instanceof Interactable)
+        stroke(#66ff66);
+      strokeWeight(0.15);
+      noFill();
+      rect(pos.x, pos.y, 1, 1); 
+      noStroke();
+    }
   }
   
   public String toString() {
@@ -239,8 +248,15 @@ class ConstantCell extends Cell {
   }
 }
 
+interface Interactable {
+  public void interact();
+  public void endInteraction();
+  public boolean isBeingInteracted();
+  public void interactWith(Interactable other);
+}
+
 // A static cell that can be turned on or off
-class SwitchCell extends Cell {
+class SwitchCell extends Cell implements Interactable {
    public final static int labelCol = #7f8eff;
    SwitchCell (Position pos) {
       super(pos);
@@ -255,6 +271,26 @@ class SwitchCell extends Cell {
   @Override
   public void cellUpdate() {};
   
+  // Interacting with this inverts the state
+  public void interact() {
+    setState(!getState()); 
+    endInteraction();
+  }
+  
+  // There is nothing written here as the Switch cell is interacted with and ended instantly. This is needed
+  // as it implements Interactable
+  public void endInteraction() {}
+  
+  // We return false as it is an instant interaction
+  public boolean isBeingInteracted() {
+    return false; 
+  }
+  
+  // This will do nothing for the switch cell
+  public void interactWith(Interactable other) {
+   endInteraction();
+  }
+  
   // Draws the colored label that represents this cell
   public void draw() {
     fill(labelCol);
@@ -263,17 +299,20 @@ class SwitchCell extends Cell {
   }
 }
 
-interface Moveable {
-  public Position posPrev = null; 
-}
-
 // Holds all data for a connected unit of cable cells, this way they update together.
 class CableUnit {
-  private ArrayList<CableCell> cables; // the cable cells that form this cable unit 
+  public ArrayList<CableCell> cables; // the cable cells that form this cable unit 
   private ArrayList<Cell> neighbors; // neighboring cells that are touching this cable unit
   
   CableUnit (ArrayList<CableCell> cables) {
     this.cables = cables;
+    this.neighbors = new ArrayList<Cell>();
+  }
+  
+  // Create a CableUnit with only one cable
+  CableUnit(CableCell c) {
+    this.cables = new ArrayList<CableCell>();
+    this.cables.add(c);
     this.neighbors = new ArrayList<Cell>();
   }
   
@@ -326,12 +365,142 @@ class CableUnit {
        }
        totalCalculations = cables.size() * (n.length * n.length);
     }
-    //println("Total array checks: " + totalCalculations + ", cables: " + cables.size() + ", " + stateUpdater.stepNum);
   }
   
   // Removes the cable from the cableunit if it is part of it
   public void removeFromUnit(CableCell c) {
-    cables.remove(c); 
+    Cell[] neighbors = c.getNeighbors();
+    CableCell[] cableNeighbors = new CableCell[4];
+    int index = 0;
+    
+    // remove this Cable from this CableUnit
+    cables.remove(c);
+    
+    // Get CableCell neighbors and put them in an array
+    for (Cell i : neighbors) {
+      if (i instanceof CableCell) {
+        cableNeighbors[index] = (CableCell) i;
+      }
+      else {
+        cableNeighbors[index] = null; 
+      }
+      index ++;
+    }
+    
+    // For each CableCell Neighbor, Reset the entire connected CableUnit and set each of the connected CableCells to have a null CableUnit (this we be assigned soon).
+    for (CableCell i : cableNeighbors) {
+      if (i == null)
+        continue;
+      if (i.getCableUnit() != null) {
+        i.getCableUnit().reset();
+      }
+      // Then give the neighbors a new CableUnit each
+      ArrayList<CableCell> cables = new ArrayList<CableCell>();
+      cables.add(i);
+      i.cUnit = new CableUnit(cables); 
+    }
+    
+    // Next, Follow the path of cables from each neighbor, adding them to that neighbors CableUnit only if the cable has not been assigned a CableUnit
+    for (CableCell i : cableNeighbors) {
+      if (i == null)
+        continue;
+      // Do not set this CableUnit up as it is already set up (more than one cable connected)
+      if (i.getCableUnit().cables.size() > 1)
+        continue;
+      
+      Queue<CableCell> nextCableCell = new LinkedBlockingQueue<CableCell>();
+      CableUnit iCableUnit = i.getCableUnit();
+      nextCableCell.add(i); // starting node / cell
+      
+      while (!nextCableCell.isEmpty()) {
+        CableCell current = nextCableCell.poll();
+        Cell[] currentN = current.getNeighbors();
+        
+        for (Cell i2 : currentN) {
+          if (i2 == null)
+            continue;
+          // Do not add the cable we are trying to remove!
+          if (i2 == c)
+            continue;
+          if (i2 instanceof CableCell) {
+            boolean isWireless = false; // Is this a Wireless Cable?
+            CableCell i3 = (CableCell) i2;
+            if (i2 instanceof WirelessCableCell) {
+              isWireless = true;
+            }
+            // If neighbor of current is not already checked, then add it to the queue
+            if (!iCableUnit.cables.contains(i3)) {
+              nextCableCell.add(i3);
+            }
+            // Trace path to Wireless connection as well if it is a WirelessCable
+            if (isWireless) {
+              WirelessCableCell i4 = (WirelessCableCell) i3;
+              if (i4.hasConnection()) {
+                if (!iCableUnit.cables.contains(i4)) {
+                nextCableCell.add(i4.getConnection());
+                }
+              }
+            }
+          }
+        }
+        // Finally, mark this cell as checked while adding it to the CableUnit if it is not in another CableUnit
+        iCableUnit.cables.add(current);
+        current.cUnit = iCableUnit;
+      }
+    }
+  }
+  
+  public void reset() {
+    for (CableCell i : cables) {
+      i.cUnit = null; 
+    }
+    cables.clear();
+    neighbors.clear();
+  }
+  
+  // Adds the connected Cables from a single Cable (c) to this CableUnit. Done by tracing the path of neighbors / connections to c if they
+  // are not already part of c's CableUnit. Doing this also removes any CableUnits the other cables were originally apart of
+  public void joinConnectedCablesFrom(CableCell c) {
+    // Next, Follow the path of cables from each CableCell neighbor of c
+      Queue<CableCell> nextCableCell = new LinkedBlockingQueue<CableCell>();
+      CableUnit cCableUnit = c.getCableUnit();
+      nextCableCell.add(c); // starting node's / cell's
+      
+      while (!nextCableCell.isEmpty()) {
+        CableCell current = nextCableCell.poll();
+        Cell[] currentN = current.getNeighbors();
+        
+        for (Cell i2 : currentN) {
+          if (i2 == null)
+            continue;
+          // Do not add the cable we are on!
+          if (i2 == c)
+            continue;
+          if (i2 instanceof CableCell) {
+            boolean isWireless = false; // Is this a Wireless Cable?
+            CableCell i3 = (CableCell) i2;
+            if (i2 instanceof WirelessCableCell) {
+              isWireless = true;
+            }
+            // If neighbor of current is not already checked, then add it to the queue
+            if (!cCableUnit.cables.contains(i3)) {
+              nextCableCell.add(i3);
+            }
+            // Trace path to Wireless connection as well if it is a WirelessCable
+            if (isWireless) {
+              WirelessCableCell i4 = (WirelessCableCell) i3;
+              if (i4.hasConnection()) {
+                if (!cCableUnit.cables.contains(i4.getConnection())) {
+                nextCableCell.add(i4.getConnection());
+                }
+              }
+            }
+          }
+        }
+        // Finally, mark this cell as checked while adding it to the CableUnit of c
+        cCableUnit.cables.add(current);
+        current.setCableUnit(cCableUnit); // this will disconnect it from any other CableUnit it was originally apart of
+      }
   }
   
   public void merge(CableUnit other) {
@@ -366,11 +535,15 @@ class CableCell extends Cell {
   
   @Override
   public void cellUpdate() {
-     cUnit.update(CellUpdateInfo.cellUpdate); // update the entire cable unit neighbors and then state, which is therefore also updating this
+    if (cUnit == null)
+      return;
+    cUnit.update(CellUpdateInfo.cellUpdate); // update the entire cable unit neighbors and then state, which is therefore also updating this
   }
   
   @Override
   public void stateUpdate() {
+    if (cUnit == null)
+      return;
     cUnit.update(CellUpdateInfo.stateUpdate); // update the entire cable unit's state which is therefore also updating this
   }
   
@@ -378,6 +551,7 @@ class CableCell extends Cell {
   public void delete() {
     // Remove self from cable unit
     cUnit.removeFromUnit(this);
+    stateUpdater.markNearbyCellsNext(this, CellUpdateInfo.cellUpdate);
   }
   
   // Checks to see if there is an existing cable unit that this
@@ -439,12 +613,12 @@ class CableCell extends Cell {
   
   @Override
   public String toString() {
-    return super.toString() + ", CableUnit data: {" + cUnit.toString() + "}"; 
+    return super.toString() + ", CableUnit data: {" + getCableUnit() + "}"; 
   }
 }
 
 // if any of the cells around it are in an 'on' state, its state is off, otherwise its state is on
-class InverterCell extends RotatableCell implements Moveable {
+class InverterCell extends RotatableCell {
   
   InverterCell(Position pos) {
      super(pos); 
@@ -472,5 +646,126 @@ class InverterCell extends RotatableCell implements Moveable {
   public void stateUpdate() {
    //TODO 
    cellUpdate(); // just do the same as the cellUpdate for now
+  }
+}
+
+class WirelessCableCell extends CableCell implements Interactable {
+  
+  public final static int labelCol = #ffee7f;
+  public final static int markerCol = #333333;
+  private WirelessCableCell other; // the Wireless cable cell this is linked with
+  public boolean isBeingInteracted = false;
+  
+  WirelessCableCell (Position pos) {
+    super(pos); 
+    other = null;
+  }
+  
+  @Override
+  public void draw() {
+    fill(labelCol);
+    noStroke();
+    rect(pos.x, pos.y, 1, 1);
+    fill(markerCol);
+    ellipse(pos.x + 0.5, pos.y + 0.5, 0.35, 0.35);
+    if (isBeingInteracted) {
+      drawConnectionLine(pos, blockPlacementUI.previewBlock.pos);
+    }
+    else if (other != null)
+      drawConnectionLine(this.pos, other.pos);
+  }
+  
+  public void drawConnectionLine(Position posStart, Position posEnd) {
+    stroke(markerCol);
+    strokeWeight(0.05);
+    line(posStart.x + 0.5, posStart.y + 0.5, posEnd.x + 0.5, posEnd.y + 0.5);
+    noStroke();
+  }
+  
+  // Establishes a connection between this and another WirelessCable Cell
+  public void connectTo(WirelessCableCell other) {
+    // Remove any existing connection from other before connecting to other
+    if (other.hasConnection()) {
+      other.disconnect(); 
+    }
+    if (this.hasConnection()) {
+     this.disconnect();
+    }
+    // Connect both WirelessCableCells to each other
+    this.connectToOther(other);
+    other.connectToOther(this);
+    // Lastly, merge their cable units
+    CableUnit unit = this.getCableUnit();
+    try {
+    unit.merge(other.getCableUnit());
+    } catch (IllegalArgumentException e) {
+       // Catching in case the two wirelessCable Cell's
+       // are already apart of the same CableUnit
+    }
+  }
+  
+  // Connects this to the other WirelessCableCell, but NOT the other way around. Use connectTo() to establish a proper connection!
+  public void connectToOther(WirelessCableCell other) {
+     this.other = other;
+     stateUpdater.markCellNext(this, CellUpdateInfo.cellUpdate);
+  }
+  
+  // Retuns true if there is a connection currently with another WirelessCableCell
+  public boolean hasConnection() {
+    if (other != null)
+      return true;
+    return false;
+  }
+  
+  // Returns the connected WirelessCableCell, will return null if there is none
+  public WirelessCableCell getConnection() {
+    return other; 
+  }
+  
+  // Removes the connection from both other and this.
+  public void disconnect() {
+    if (other != null) {
+      other.disconnectFromOther(); // disconnect other from this
+      disconnectFromOther(); // disconnect this from other
+    }
+  }
+  
+  // Removes the connection via THIS END ONLY, use disconnect() to have both WirelessCableCells be disconnected from each other 
+  public void disconnectFromOther() {
+    other = null;
+    setCableUnit(new CableUnit(this));
+    getCableUnit().joinConnectedCablesFrom(this);
+    stateUpdater.markCellNext(this, CellUpdateInfo.cellUpdate);
+  }
+  
+  public void interact() {
+     isBeingInteracted = true;
+  }
+  
+  public void endInteraction() {
+    isBeingInteracted = false; 
+  }
+  
+  public boolean isBeingInteracted() {
+    return isBeingInteracted; 
+  }
+  
+  public void interactWith(Interactable other) {
+    if (other instanceof WirelessCableCell) {
+      // If we are not trying to connect to ourself and
+      // we are not trying to connect to what we are already connected to
+      if (other != this && other != this.other) {
+        connectTo((WirelessCableCell) other); 
+      }
+      else {
+       disconnect(); 
+      }
+    }
+    endInteraction();
+  }
+  
+  public void delete() {
+    disconnect();
+    super.delete(); 
   }
 }
