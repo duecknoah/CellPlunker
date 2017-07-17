@@ -93,6 +93,10 @@ function removeFromUnit(CableCell c) {
 	Make each cableNeighbor have a new CableUnit
 		Get every connected CableCell and add it to the cables of this CableUnit
 	
+	for (CableCell i in cableNeighbors)
+		cUnit = new CableUnit(new ArrayList<CableCell> )
+
+
 	// Find out which neighbors have a cablepath connecting to every other neighbor, if they are connected, then make the two cableUnits the same. We do not merge as the CableCell's are all the same, this would create duplicates if we merged.
 	loop through 'cableNeighbors'
 		for integer i=0 < 4
@@ -101,8 +105,11 @@ function removeFromUnit(CableCell c) {
 					continue;
 				CableUnit iC = cableNeighbors[i].getCableUnit();
 				CableUnit jC = cableNeighbors[j].getCableUnit();
-				if (iC.contains(cableNeighbors[j]))
+				// If 
+				if (iC.cables.contains(cableNeighbors[j]))
 					iC.merge(jC);
+					for (CableCell k in jC.cables)
+						k.cUnit = iC;
 
 
 
@@ -146,3 +153,15 @@ function removeFromUnit(CableCell c) {
 
 	cables.remove(c);
 }
+
+
+Removing WirelessCable Cell (Cell Update)
+Adding WirelessCable Cell (Cell Update)
+Connecting Wireless Cable Cells (State Update)
+
+
+Disconnecting Wireless Cable Cells (State Update)
+	DisconnectFromOther() {
+		Make the wirelessCableCell have a brand new CableUnit
+		Trace connections and add connections to this cableUnit
+	}
