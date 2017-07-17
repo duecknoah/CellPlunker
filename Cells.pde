@@ -613,7 +613,7 @@ class CableCell extends Cell {
   
   @Override
   public String toString() {
-    return super.toString() + ", CableUnit data: {" + cUnit.toString() + "}"; 
+    return super.toString() + ", CableUnit data: {" + getCableUnit() + "}"; 
   }
 }
 
@@ -652,7 +652,7 @@ class InverterCell extends RotatableCell {
 class WirelessCableCell extends CableCell implements Interactable {
   
   public final static int labelCol = #ffee7f;
-  public final static int markerCol = #ff0000;
+  public final static int markerCol = #333333;
   private WirelessCableCell other; // the Wireless cable cell this is linked with
   public boolean isBeingInteracted = false;
   
@@ -667,7 +667,7 @@ class WirelessCableCell extends CableCell implements Interactable {
     noStroke();
     rect(pos.x, pos.y, 1, 1);
     fill(markerCol);
-    ellipse(pos.x + 0.5, pos.y + 0.5, 0.5, 0.5);
+    ellipse(pos.x + 0.5, pos.y + 0.5, 0.35, 0.35);
     if (isBeingInteracted) {
       drawConnectionLine(pos, blockPlacementUI.previewBlock.pos);
     }
@@ -677,6 +677,7 @@ class WirelessCableCell extends CableCell implements Interactable {
   
   public void drawConnectionLine(Position posStart, Position posEnd) {
     stroke(markerCol);
+    strokeWeight(0.05);
     line(posStart.x + 0.5, posStart.y + 0.5, posEnd.x + 0.5, posEnd.y + 0.5);
     noStroke();
   }
