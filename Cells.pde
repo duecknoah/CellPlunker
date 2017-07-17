@@ -271,6 +271,11 @@ class SwitchCell extends Cell implements Interactable {
   @Override
   public void cellUpdate() {};
   
+  @Override
+  public void delete() {
+    stateUpdater.markNearbyCellsNext(this, CellUpdateInfo.cellUpdate);
+  }
+  
   // Interacting with this inverts the state
   public void interact() {
     setState(!getState()); 
