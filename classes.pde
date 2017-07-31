@@ -227,7 +227,6 @@ class StateUpdater {
         continue;
       if (cellsToBeUpdated.get(i.pos) == null) {
         cellsToBeUpdated.put(i.pos, new CellUpdateInfo(i, updateType)); 
-        println("added " + updateType + ", " + i);
       }
     }    
   }
@@ -275,8 +274,6 @@ class StateUpdater {
       if (pair.getValue() == null)
         continue; 
       CellUpdateInfo cInfo = (CellUpdateInfo) pair.getValue();
-     // println(cInfo.getCell());
-     println("Cell update (type: " + cInfo.typeToString() + "): " + cInfo.getCell());
       switch(cInfo.getType()) {
         case CellUpdateInfo.cellUpdate:
           cInfo.getCell().cellUpdate();
