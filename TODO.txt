@@ -1,5 +1,0 @@
-- Show a 'help gui'
-- Make it so pressing 'h' hides Wireless connections
-- Fix a bug that causes placing inverter cells to not update cables
-- Change color of switch cell, maybe show a icon indicating whether it is on or off (without using state view)
-- Only draw what u can see
