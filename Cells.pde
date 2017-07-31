@@ -56,7 +56,6 @@ abstract class Cell {
       }
       i ++;
     }
-    
     return stateNeighbors;
   }
   
@@ -648,7 +647,10 @@ class InverterCell extends RotatableCell {
   
   @Override
   public void cellUpdate() {
-     boolean sumState = true; // the sum state of all of the surrounding cells, if one cell is true, then the sum state will be false
+     // the sum state of the cell behind it (input cell), if it is true, 
+     // then the sumState will be false. If the input cell 
+     // is false, then the sumState will be false
+     boolean sumState = true;
 
      Cell cellInput = getCellBehind();
      if (cellInput == null) {
@@ -663,6 +665,16 @@ class InverterCell extends RotatableCell {
   public void stateUpdate() {
    //TODO 
    cellUpdate(); // just do the same as the cellUpdate for now
+  }
+  
+  @Override
+  public void setState(boolean newState) {
+    if (this.state != newState) {
+      this.state = newState;
+      Cell cFront = getCellInFront();
+      if (cFront != null)
+        stateUpdater.markCellNext(getCellInFront(), CellUpdateInfo.cellUpdate);
+    }
   }
 }
 

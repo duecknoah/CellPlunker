@@ -60,6 +60,14 @@ class CellUpdateInfo {
   public Cell getCell() {
     return cell; 
   }
+  
+  public String typeToString() {
+    if (type == stateUpdate)
+      return "stateUpdate";
+    if (type == cellUpdate)
+      return "cellUpdate";
+    return "unknown";
+  }
 }
 
 // Holds all Cell data and functions to retrieve cell data
@@ -219,6 +227,7 @@ class StateUpdater {
         continue;
       if (cellsToBeUpdated.get(i.pos) == null) {
         cellsToBeUpdated.put(i.pos, new CellUpdateInfo(i, updateType)); 
+        println("added " + updateType + ", " + i);
       }
     }    
   }
@@ -267,6 +276,7 @@ class StateUpdater {
         continue; 
       CellUpdateInfo cInfo = (CellUpdateInfo) pair.getValue();
      // println(cInfo.getCell());
+     println("Cell update (type: " + cInfo.typeToString() + "): " + cInfo.getCell());
       switch(cInfo.getType()) {
         case CellUpdateInfo.cellUpdate:
           cInfo.getCell().cellUpdate();
