@@ -365,10 +365,17 @@ class CableUnit {
               if (!cables.contains(j)) { // optimize
                 cables.add((CableCell) j);
               }
+              if (j instanceof WirelessCableCell) {
+                WirelessCableCell jWireless = (WirelessCableCell) j;
+                if (jWireless.hasConnection()) {
+                  if (!cables.contains(jWireless.getConnection())) {
+                     cables.add((WirelessCableCell) jWireless); 
+                  }
+                }
+              }
             }
          }
        }
-       totalCalculations = cables.size() * (n.length * n.length);
     }
   }
   
@@ -400,9 +407,7 @@ class CableUnit {
         i.getCableUnit().reset();
       }
       // Then give the neighbors a new CableUnit each
-      ArrayList<CableCell> cables = new ArrayList<CableCell>();
-      cables.add(i);
-      i.cUnit = new CableUnit(cables); 
+      i.setCableUnit(new CableUnit(i)); //<>//
     }
     
     // Next, Follow the path of cables from each neighbor, adding them to that neighbors CableUnit only if the cable has not been assigned a CableUnit
@@ -419,7 +424,12 @@ class CableUnit {
       
       while (!nextCableCell.isEmpty()) {
         CableCell current = nextCableCell.poll();
-        Cell[] currentN = current.getNeighbors();
+        ArrayList<Cell> currentN = new ArrayList<Cell>(Arrays.asList(current.getNeighbors()));
+        //Cell[] currentN = current.getNeighbors();
+        // Check starting node/cell as well as the neighbors on the first run. This is because the starting node is already a
+        // neighbor of the cell we are trying to remove. The other 'neighbors' are neighbors of this starting node.
+        if (current == i)
+           currentN.add(i);
         
         for (Cell i2 : currentN) {
           if (i2 == null)
@@ -441,8 +451,8 @@ class CableUnit {
             if (isWireless) {
               WirelessCableCell i4 = (WirelessCableCell) i3;
               if (i4.hasConnection()) {
-                if (!iCableUnit.cables.contains(i4)) {
-                nextCableCell.add(i4.getConnection());
+                if (!iCableUnit.cables.contains(i4.getConnection())) {
+                  nextCableCell.add(i4.getConnection());
                 }
               }
             }
@@ -496,7 +506,7 @@ class CableUnit {
               WirelessCableCell i4 = (WirelessCableCell) i3;
               if (i4.hasConnection()) {
                 if (!cCableUnit.cables.contains(i4.getConnection())) {
-                nextCableCell.add(i4.getConnection());
+                  nextCableCell.add(i4.getConnection());
                 }
               }
             }
@@ -631,7 +641,9 @@ class InverterCell extends RotatableCell {
   
   @Override
   public void intialize() {
-    cellUpdate(); 
+    cellUpdate();
+    stateUpdater.markCell(this, CellUpdateInfo.cellUpdate);
+    stateUpdater.markNearbyCellsNext(this, CellUpdateInfo.cellUpdate);
   }
   
   @Override

@@ -20,7 +20,7 @@ class Position {
    
    @Override
    public String toString() {
-     return "{x: " + x + ", y: " + y + "}"; 
+     return "{x: " + x + ", y: " + y + "}";
    }
 }
 
@@ -66,7 +66,7 @@ class CellUpdateInfo {
 class Grid {
    private final int xsize;
    private final int ysize;
-   public boolean viewCellStates = false; // draw cell states? If false, it will draw the label color of the cell instead
+   public boolean viewCellStates = true; // draw cell states? If false, it will draw the label color of the cell instead
    private Cell[][] cells;
    
    Grid (int width, int height) {
@@ -167,8 +167,9 @@ class Grid {
      if (cells[pos.x][pos.y] instanceof RotatableCell) {
        RotatableCell c = (RotatableCell) cells[pos.x][pos.y];
        c.setOrientation(orientation);
-       c.cellUpdate();
+       c.intialize();
      }
+     else throw new IllegalArgumentException("Cannot place a Cell on an orientation when it is not rotatable!"); 
      return true;
    }
    
@@ -188,7 +189,7 @@ class StateUpdater {
   // If a cells state is changed, it will update its neighbors via a state update
   private HashMap<Position, CellUpdateInfo> cellsUpdated; // cells just updated
   private HashMap<Position, CellUpdateInfo> cellsToBeUpdated; // cells to be updated next step
-  private int stepsPerSec = 16; // number of steps per second (def 8)
+  private int stepsPerSec = 16; // number of steps per second (def 16)
   private float stepTimer = 0;
   public int stepNum = 0; // REMOVE ME, ONLY HERE FOR TESTING PURPOSES
   
@@ -235,7 +236,6 @@ class StateUpdater {
   }
   
   public void update() {
-    /*
     if (stepTimer > frameRate / stepsPerSec) {
       step();
       stepTimer = 0;
@@ -243,13 +243,14 @@ class StateUpdater {
     else {
       stepTimer ++; 
     }
-    */
+    /* TO BE IMPLEMENTED
     int i = 0;
-    int maxSteps = 16;
+    int maxSteps = 15; // def 15
     while(stateUpdater.cellsToBeUpdated.size() > 0 && i < maxSteps) {
       step(); 
       i ++;
     }
+    */
   }
   
   // Update cells to be updated and clear the cells updated
@@ -440,7 +441,7 @@ class Camera {
    
    Camera() {
      pos = new Position(0, 0);
-     scale = 1;
+     scale = 12;
    }
    
    public void userControl() {

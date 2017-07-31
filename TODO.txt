@@ -1,6 +1,5 @@
-- Make CableUnits join or split on cell updates
+- Show a 'help gui'
 - Make it so pressing 'h' hides Wireless connections
-- Make Wireless connection lines a more subtle color (maybe dark gray?)
-- Fix bug when u remove a switch cell that is on, it does not update the connected CableCell to turn off
+- Fix a bug that causes placing inverter cells to not update cables
 - Change color of switch cell, maybe show a icon indicating whether it is on or off (without using state view)
 - Only draw what u can see
