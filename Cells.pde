@@ -45,11 +45,11 @@ abstract class Cell {
     
     int i = 0;
     for (Cell n : stateNeighbors) {
-      if (n instanceof InverterCell) {
-         InverterCell n2 = (InverterCell) n; 
+      if (n instanceof RotatableCell) {
+         RotatableCell n2 = (RotatableCell) n; 
          // If this neighboring InverterCell is facing this, 
          // then we are affected by its state, so keep it in the array
-         if (n2.getCellInFront() == this) {
+         if (n2.isFacing(this)) {
            continue;
          }
          stateNeighbors[i] = null; // don't count this
@@ -207,6 +207,13 @@ abstract class RotatableCell extends Cell {
     fill(invertedCol);
     triangle(t.x, t.y, bl.x, bl.y, br.x, br.y);
     //rect(pos.x, pos.y, centerPos.x - pos.x, centerPos.y - pos.y);
+  }
+  
+  // Returns true if this is facing Cell c
+  public boolean isFacing(Cell c) {
+    if (getCellInFront() == c)
+      return true;
+    return false;
   }
 }
 
@@ -657,7 +664,12 @@ class InverterCell extends RotatableCell {
        setState(true);
        return;
      }
-     sumState = (cellInput.getState()) ? false : sumState;
+     // If the cell input is rotatable, then only count its state if it is facing this.
+     if (cellInput instanceof RotatableCell) {
+       RotatableCell i = (RotatableCell) cellInput;
+       sumState = (i.isFacing(this)) ? !i.getState() : sumState;
+     }
+     else sumState = (cellInput.getState()) ? false : sumState;
      setState(sumState);
   }
   
