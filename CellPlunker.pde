@@ -18,6 +18,8 @@ dynamic
   inverter cell (the same as a reader cell, but inverted
 */
 
+PShader gridShader;
+
 Grid grid = new Grid(500, 500);
 StateUpdater stateUpdater = new StateUpdater();
 Camera cam = new Camera();
@@ -26,12 +28,36 @@ BlockPlacementUI blockPlacementUI = new BlockPlacementUI();
 BlockSelectionUI blockSelectionUI = new BlockSelectionUI();
 
 void setup() {
-  size(500, 500);
+  size(500, 500, P2D);
+  surface.setResizable(true);
   noSmooth();
+  
   Keyboard.keys.put('w', false);
   Keyboard.keys.put('a', false);
   Keyboard.keys.put('s', false);
   Keyboard.keys.put('d', false);
+  String[] vertSource = {
+        "uniform mat4 transform;",
+ 
+        "attribute vec4 vertex;",
+ 
+        "void main() {",
+            "gl_Position = transform * vertex;",
+        "}"
+    };
+    String[] fragSource = {
+        "uniform vec2 pos;",
+        "uniform float scale;",
+        
+        "void main() {",
+            "if(fract((gl_FragCoord.x - pos.x) / (scale * 2)) > 0.5 ^ fract((gl_FragCoord.y - pos.y) / (scale * 2)) > 0.5)",
+                "gl_FragColor = vec4(0.1, 0.1, 0.1, 1.0);",
+            "else",
+                "gl_FragColor = vec4(0.05, 0.05, 0.05, 1.0);",
+        "}"
+    };
+    gridShader = new PShader(this, vertSource, fragSource);
+  //gridShader = loadShader("GridFrag.glsl", "GridVert.glsl");
 }
 
 void keyPressed() {
@@ -110,5 +136,6 @@ void draw() {
   Position mousePos = cam.screenToGridPos(new Position(mouseX, mouseY));
   text("mouseX: " + mousePos.x + ", mouseY: " + mousePos.y, 16, 32);
   text("camX: " + cam.pos.x + ", camY: " + cam.pos.y, 16, 48);
+  text("maxSteps: " + stateUpdater.maxSteps, 16, 64);
   Mouse.resetWheelCount();
 }
