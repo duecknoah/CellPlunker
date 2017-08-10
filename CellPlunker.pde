@@ -132,9 +132,11 @@ void mouseWheel(MouseEvent event) {
 
 void draw() {
   cam.userControl();
-  //camestrictInGrid();
-  
-  background(#555555);
+  gui.update();
+  /* TODO
+  camestrictInGrid();
+  */
+  // Translations and scaling for zoom and camera panning
   pushMatrix();
   translate(width / 2, height / 2);
   scale(cam.scale);
@@ -145,8 +147,6 @@ void draw() {
   popMatrix();
   fill(255);
   blockSelectionUI.update();
-  stateUpdater.update();
-  gui.update();
   gui.draw();
   fill(255);
   text("FPS: " + round(frameRate), 16, 16);
@@ -155,4 +155,6 @@ void draw() {
   text("camX: " + cam.pos.x + ", camY: " + cam.pos.y, 16, 48);
   text("maxSteps: " + stateUpdater.maxSteps, 16, 64);
   Mouse.resetWheelCount();
+  // Lastly do the updates for the state updater
+  stateUpdater.update();
 }
