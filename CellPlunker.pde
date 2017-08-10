@@ -64,7 +64,13 @@ void setup() {
     ArrayList<GUIObject> guiObjects = new ArrayList<GUIObject>();
     
     // Add gui objects here, ex.
-    //guiObjects.add(new ButtonText(new Position(16, 16), "Save", ""));
+    // guiObjects.add(new ButtonText(new GUIPosition(16, -16), LEFT, BOTTOM, "Slow", ""));
+    guiObjects.add(new ButtonText(new GUIPosition(16, 16), "Save", ""));
+    guiObjects.add(new ButtonText(new GUIPosition(16, 48), "Load", "loadSave"));
+    guiObjects.add(new TextDisplay(new GUIPosition(16, -96, LEFT, BOTTOM), "Steps:\n...", 12, #ffffff));
+    guiObjects.add(new ButtonText(new GUIPosition(16, -64, LEFT, BOTTOM), "Fast", ""));
+    guiObjects.add(new ButtonText(new GUIPosition(16, -32, LEFT, BOTTOM), "Slow", ""));
+    guiObjects.add(new ButtonSmall(new GUIPosition(-16 + -26, 16, RIGHT, TOP), "?", ""));
     
     gui = new GUIHandler(guiObjects);
 }

@@ -47,5 +47,15 @@ public String idToCellName(int id) {
       return "WirelessCable Cell";
     default:
       return "?";
+      
   }
+}
+
+// Button functions (clickEvent functions)
+public void loadSave() {
+  selectInput("Select a save to load:", "loadSelected");
+}
+
+public void loadSelected(File save) {
+ // if (selection
 }

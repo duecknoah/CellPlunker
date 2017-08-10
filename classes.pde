@@ -552,6 +552,85 @@ static class Mouse {
 
 /******************** GUI ********************/
 
+class GUIPosition {
+  private float x; // the current x position (affected by halign)
+  private float y; // the current y position (affected by valign)
+  public float xGoal; // the x we want to achieve (not affected by halign)
+  public float yGoal; // the y we want to achieve (not affected by valign)
+  // use keywords TOP, LEFT, BOTTOM, RIGHT, to make the x/y values relative to that side of the window.
+  // use -1 to make x/y values relative to the top left view of the window
+  private int halign; // LEFT, RIGHT
+  private int valign; // UP, DOWN
+  
+  GUIPosition(float xGoal, float yGoal, int halign, int valign) {
+    this.xGoal = xGoal;
+    this.yGoal = yGoal;
+    this.halign = halign;
+    this.valign = valign;
+    update(); // initial update
+  }
+  
+  GUIPosition(float xGoal, float yGoal) {
+   this.xGoal = xGoal;
+   this.yGoal = yGoal;
+   this.halign = LEFT;
+   this.valign = TOP;
+   update(); // initial update
+  }
+  
+  // Updates the position, only needed to be run if the window is resized or when this is intialized
+  public void update() {
+     switch(halign) {
+       case LEFT:
+         this.x = xGoal;
+       break;
+       case CENTER:
+         this.x = (width / 2) + xGoal;
+       break;
+       case RIGHT:
+         this.x = width + xGoal;
+       break;
+       default:
+         throw new IllegalArgumentException("Illegal halign position! : " + halign + ", legal positiions: LEFT, CENTER, RIGHT");
+     }
+     
+     switch(valign) {
+       case TOP:
+         this.y = yGoal;
+       break;
+       case CENTER:
+         this.y = (height / 2) + yGoal;
+       break;
+       case BOTTOM:
+         this.y = height + yGoal;
+       break;
+       default:
+         throw new IllegalArgumentException("Illegal valign position! : " + valign + ", legal positiions: TOP, CENTER, BOTTOM");
+     }
+  }
+  
+  public void setPos(float xGoal, float yGoal) {
+    this.xGoal = xGoal;
+    this.yGoal = yGoal;
+  }
+  
+  public float getX() {
+    return x; 
+  }
+  
+  public float getY() {
+    return y; 
+  }
+  
+  public float getXGoal() {
+    return xGoal;
+  }
+  
+  public float getYGoal() {
+    return yGoal; 
+  }
+}
+
 interface GUIObject {
  public void update();
  public void draw();
@@ -565,22 +644,28 @@ interface GUIClickable extends GUIObject {
   public boolean mouseExited(); // returns true if the mouse just left when the button is
 }
 
-class ButtonText implements GUIClickable {
-  private Position pos; // top left position of the button
+// This is here to be used in the gui handler when recognizing if a
+// GUI Object is compatible with it. Although a GUIObject could have a direct parent
+// of the GUIObject, it is very abstract to which type of gui object it is categorized under.
+// so this is meant to keep all of the displayable / non-clickable gui objects under one category
+// separate from the other objects like GUIClickable.
+interface GUIDisplayable extends GUIObject {};
+
+abstract class Button implements GUIClickable {
+  protected GUIPosition pos; // top left position of the button
   // Images
-  private final PImage image_nohover = imageDB.gui_button_text_nohover;
-  private final PImage image_hover = imageDB.gui_button_text_hover;
-  private final PImage image_click = imageDB.gui_button_text_click;
+  protected PImage image_nohover = null;
+  protected PImage image_hover = null;
+  protected PImage image_click = null;
   // Box data
-  private PImage image_current = image_nohover;
-  private String text;
-  private final int w = 94; // width
-  private final int h = 24; // height
+  protected PImage image_current = null;
+  protected int w = 94; // width
+  protected int h = 24; // height
   // Event data
-  private boolean isClicked = false; // true when the mouse clicks this buton
-  private boolean isHovering = false; // true the entire time the mouse is hovering over this
-  private boolean mouseEntered = false; // true when the mouse JUST entered
-  private boolean mouseExited = false; // true when the mouse JUST exited
+  protected boolean isClicked = false; // true when the mouse clicks this buton
+  protected boolean isHovering = false; // true the entire time the mouse is hovering over this
+  protected boolean mouseEntered = false; // true when the mouse JUST entered
+  protected boolean mouseExited = false; // true when the mouse JUST exited
   /* the string of the method/function to run when clicked, it must be a public functions 
   with no args as Processing does not allow method references due to using an older version 
   of Java. However, they do provide a way using the function 'method(String methodName)' to 
@@ -588,18 +673,17 @@ class ButtonText implements GUIClickable {
   */
   private String clickEventMethod; 
   
-  ButtonText (Position pos, String text, String clickEventMethod) {
+  Button (GUIPosition pos, String clickEventMethod) {
     this.pos = pos;
-    this.text = text;
     this.clickEventMethod = clickEventMethod;
   }
   
   public void update() {
     // If mouse is hovering over the button
-    if (mouseX >= pos.x 
-    && mouseX <= pos.x + w 
-    && mouseY >= pos.y 
-    && mouseY <= pos.y + h) {
+    if (mouseX >= pos.getX() 
+    && mouseX <= pos.getX() + w 
+    && mouseY >= pos.getY() 
+    && mouseY <= pos.getY() + h) {
       // If not already hovering, mark as mouse just entered
       if (!isHovering) {
         isHovering = true;
@@ -612,6 +696,7 @@ class ButtonText implements GUIClickable {
         isClicked = true;
         image_current = image_click;
         mousePressed = false;
+        clickEvent();
       }
       else {
         isClicked = false;
@@ -628,14 +713,23 @@ class ButtonText implements GUIClickable {
       }
       else mouseExited = false;
     }
+    
+    pos.update(); // update gui position (in case window was resized)
   }
   
-  public void draw() {
-     image(image_current, pos.x, pos.y);
-     fill(255);
-     textAlign(CENTER, CENTER);
-     text(text, pos.x + (w / 2), pos.y + (h / 2));
-     textAlign(LEFT, TOP); // reset
+  protected void setDimensions(int width, int height) {
+    this.w = width;
+    this.h = height;
+  }
+  
+  protected void setImages(PImage image_nohover, PImage image_hover, PImage image_click) {
+    this.image_nohover = image_nohover;
+    this.image_hover = image_hover;
+    this.image_click = image_click;
+  }
+  
+  protected void setImageCurrent(PImage image_current) {
+    this.image_current = image_current; 
   }
   
   public boolean mouseEntered() {
@@ -655,13 +749,109 @@ class ButtonText implements GUIClickable {
   }
   
   public void clickEvent() {
+    if (clickEventMethod == "")
+      return;
     method(clickEventMethod);
+  }
+}
+
+class ButtonText extends Button {
+  private String text;
+  
+  ButtonText (GUIPosition pos, String text, String clickEventMethod) {
+    super(pos, clickEventMethod);
+    this.text = text;
+    // Setting Variables extended from Button ...
+    setImages(imageDB.gui_button_text_nohover, imageDB.gui_button_text_hover, imageDB.gui_button_text_click);
+    setImageCurrent(this.image_nohover);
+    setDimensions(94, 24);
+  }
+  
+  public void draw() {
+     image(image_current, pos.getX(), pos.getY());
+     fill(255);
+     textAlign(CENTER, CENTER);
+     text(text, pos.getX() + (w / 2), pos.getY() + (h / 2));
+     textAlign(LEFT, TOP); // reset
+  }
+}
+
+class ButtonSmall extends Button {
+  private String text;
+  
+  ButtonSmall(GUIPosition pos, String text, String clickEventMethod) {
+    super(pos, clickEventMethod); 
+    this.text = text;
+    // Setting Variables extended from button ...
+    setImages(imageDB.gui_button_small_nohover, imageDB.gui_button_small_hover, imageDB.gui_button_small_click);
+    setImageCurrent(this.image_nohover);
+    setDimensions(26, 26);
+  }
+  
+  public void draw() {
+    image(image_current, pos.getX(), pos.getY());
+    fill(255);
+    textAlign(CENTER, CENTER);
+    text(text, pos.getX() + (w / 2), pos.getY() + (h / 2));
+    textAlign(LEFT, TOP); // reset
+  }
+}
+
+class TextDisplay implements GUIDisplayable {
+  public GUIPosition pos;
+  public String text;
+  public int fontSize;
+  public color fontColor;
+  
+  TextDisplay(GUIPosition pos, String text) {
+    this.pos = pos;
+    this.text = text;
+    this.fontSize = 12;
+    this.fontColor = #ffffff; // white
+  }
+  
+  TextDisplay(GUIPosition pos, String text, int fontSize, color fontColor) {
+    this.pos = pos;
+    this.text = text;
+    this.fontSize = fontSize;
+    this.fontColor = fontColor;
+  }
+  
+  public void update() {
+    pos.update();
+  }
+  
+  public void draw() {
+    fill(fontColor);
+    textSize(fontSize);
+    text(text, pos.getX(), pos.getY());
+    textSize(12); // reset
+    fill(255); // reset
+  }
+}
+
+class ImageDisplay implements GUIDisplayable {
+  public GUIPosition pos;
+  public PImage image;
+  
+  ImageDisplay (GUIPosition pos, PImage image) {
+    this.pos = pos;
+    this.image = image;
+  }
+  
+  public void update() {
+    pos.update(); 
+  }
+  
+  public void draw() {
+    image(image, pos.getX(), pos.getY()); 
   }
 }
 
 // This class handles all of the gui drawing and updating
 class GUIHandler {
    private ArrayList<GUIClickable> clickables;
+   private ArrayList<GUIDisplayable> displayables;
    
    GUIHandler () {
      init();
@@ -675,6 +865,7 @@ class GUIHandler {
    // Initialize
    private void init() {
       clickables = new ArrayList<GUIClickable>();
+      displayables = new ArrayList<GUIDisplayable>();
    }
    
    // Adds an arraylist of guiobjects to the GUIHandler
@@ -683,6 +874,10 @@ class GUIHandler {
      for (GUIObject i : guiObjects) {
        if (i instanceof GUIClickable) {
          clickables.add((GUIClickable) i); 
+         continue;
+       }
+       if (i instanceof GUIDisplayable) {
+         displayables.add((GUIDisplayable) i);
          continue;
        }
        throw new IllegalArgumentException("The GUIObject: (" + i + ") is not compatible with the GUIHandler");
@@ -701,11 +896,17 @@ class GUIHandler {
      for (GUIClickable i : clickables) {
        i.update(); 
      }
+     for (GUIDisplayable i : displayables) {
+       i.update(); 
+     }
    }
    
    // Updates all of the gui drawing
    public void draw() {
      for (GUIClickable i : clickables) {
+       i.draw(); 
+     }
+     for (GUIDisplayable i : displayables) {
        i.draw(); 
      }
    }
