@@ -232,7 +232,6 @@ class StateUpdater {
   private HashMap<Position, CellUpdateInfo> cellsToBeUpdated; // cells to be updated next step
   private int stepsPerSec = 16; // number of steps per second (def 16)
   private float stepTimer = 0;
-  private int maxSteps = 15;
 
   StateUpdater () {
     cellsUpdated = new HashMap<Position, CellUpdateInfo>(); 
@@ -283,14 +282,6 @@ class StateUpdater {
     } else {
       stepTimer ++;
     }
-     /*TO BE IMPLEMENTED
-     int i = 0;
-     int maxSteps = 15; // def 15
-     while(stateUpdater.cellsToBeUpdated.size() > 0 && i < maxSteps) {
-       step(); 
-       i ++;
-     }
-     */
   }
 
   // Update cells to be updated and clear the cells updated

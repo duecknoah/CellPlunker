@@ -19,6 +19,8 @@ dynamic
 */
 
 PShader gridShader;
+PFont fnt_main_12;
+PFont fnt_main_16;
 
 Grid grid = new Grid(500, 500);
 StateUpdater stateUpdater = new StateUpdater();
@@ -28,6 +30,9 @@ BlockPlacementUI blockPlacementUI = new BlockPlacementUI();
 BlockSelectionUI blockSelectionUI = new BlockSelectionUI();
 ImageLoader imageDB;
 GUIHandler gui;
+
+// GUI references
+TextDisplay stepCounter;
 
 void setup() {
   size(500, 500, P2D);
@@ -61,18 +66,23 @@ void setup() {
     gridShader = new PShader(this, vertSource, fragSource);
     /////////////////// Image and GUI ///////////////////
     imageDB = new ImageLoader();
+    fnt_main_12 = loadFont("data/OpenSans-12.vlw");
+    fnt_main_16 = loadFont("data/OpenSans-16.vlw");
+    textFont(fnt_main_12);
     ArrayList<GUIObject> guiObjects = new ArrayList<GUIObject>();
     
     // Add gui objects here, ex.
     // guiObjects.add(new ButtonText(new GUIPosition(16, -16), LEFT, BOTTOM, "Slow", ""));
     guiObjects.add(new ButtonText(new GUIPosition(16, 16), "Save", ""));
     guiObjects.add(new ButtonText(new GUIPosition(16, 48), "Load", "loadSave"));
-    guiObjects.add(new TextDisplay(new GUIPosition(16, -96, LEFT, BOTTOM), "Steps:\n...", 12, #ffffff));
-    guiObjects.add(new ButtonText(new GUIPosition(16, -64, LEFT, BOTTOM), "Fast", ""));
-    guiObjects.add(new ButtonText(new GUIPosition(16, -32, LEFT, BOTTOM), "Slow", ""));
+    stepCounter = new TextDisplay(new GUIPosition(16, -96, LEFT, BOTTOM), "STEP_COUNTER", 14, #ffffff);
+    guiObjects.add(stepCounter);
+    guiObjects.add(new ButtonText(new GUIPosition(16, -64, LEFT, BOTTOM), "Fast", "setFastStepSpd"));
+    guiObjects.add(new ButtonText(new GUIPosition(16, -32, LEFT, BOTTOM), "Slow", "setSlowStepSpd"));
     guiObjects.add(new ButtonSmall(new GUIPosition(-16 + -26, 16, RIGHT, TOP), "?", ""));
     
     gui = new GUIHandler(guiObjects);
+    
 }
 
 void keyPressed() {
@@ -133,6 +143,9 @@ void mouseWheel(MouseEvent event) {
 void draw() {
   cam.userControl();
   gui.update();
+  // GUI references
+  stepCounter.text = "Steps: " + stateUpdater.stepsPerSec + "/s";
+  
   /* TODO
   camestrictInGrid();
   */
@@ -149,11 +162,8 @@ void draw() {
   blockSelectionUI.update();
   gui.draw();
   fill(255);
-  text("FPS: " + round(frameRate), 16, 16);
-  Position mousePos = cam.screenToGridPos(new Position(mouseX, mouseY));
-  text("mouseX: " + mousePos.x + ", mouseY: " + mousePos.y, 16, 32);
-  text("camX: " + cam.pos.x + ", camY: " + cam.pos.y, 16, 48);
-  text("maxSteps: " + stateUpdater.maxSteps, 16, 64);
+  int yOffset = 64;
+  text("FPS: " + round(frameRate), 16, 16 + yOffset);
   Mouse.resetWheelCount();
   // Lastly do the updates for the state updater
   stateUpdater.update();

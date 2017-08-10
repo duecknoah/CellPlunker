@@ -59,3 +59,11 @@ public void loadSave() {
 public void loadSelected(File save) {
  // if (selection
 }
+
+public void setSlowStepSpd() {
+  stateUpdater.stepsPerSec = 2; 
+}
+
+public void setFastStepSpd() {
+  stateUpdater.stepsPerSec = 16; 
+}
