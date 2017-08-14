@@ -444,6 +444,7 @@ class User {
 class Camera {
   public Position pos;
   public int scale;
+  private final int constrainPadding = 100; // the limits on how far the camera can move out of bounds
 
   Camera() {
     pos = new Position(0, 0);
@@ -472,6 +473,16 @@ class Camera {
 
     scale -= Mouse.wheelCount;
     scale = constrain(scale, 1, 24);
+    
+    // When window is resized, recenter camera position to middle of grid
+    if (windowWatcher.resized()) {
+      int gridXSizeOnScreen = grid.getXSize();
+      int gridYSizeOnScreen = grid.getYSize();
+      
+      pos.x = -((width - gridXSizeOnScreen) / 2);
+      pos.y = -((height - gridYSizeOnScreen) / 2);
+    }
+    println(pos.x + ", " + pos.y);
   }
 
   // Gets a position on the screen and translates it to
@@ -490,24 +501,6 @@ class Camera {
     ypos += height / 2;
     ypos += cam.pos.y;
     return new Position((int) xpos, (int) ypos);
-  }
-
-  // Prevents the camera from going outside the grid
-  public void restrictInGrid() {
-    /*
-     Position tl = screenToGridPos(new Position(pos.x, pos.y)); // top left of cam on grid position
-     Position br = screenToGridPos(new Position(pos.x + width, pos.y + height)); // bottom right of cam on grid position
-     if (tl.x < 0)
-     pos.x = 0;
-     if (pos.y < 0)
-     pos.y = 0;
-     
-     if (br.x > grid.xsize)
-     pos.x = grid.xsize - (width / scale);  
-     
-     if (pos.y + (height / scale) > grid.ysize)
-     pos.y = grid.ysize - (height / scale);
-     */
   }
 }
 
@@ -916,5 +909,28 @@ public class ImageLoader {
     
     gui_increment = loadImage(gui_dir + "/increment.png");
     println("DONE");
+  }
+}
+
+// Watches to see if the window is resized, keeps track of width and height of screen
+public class WindowWatcher {
+  private int widthPrev;
+  private int heightPrev;
+  private boolean windowResized = false;
+  
+  public void watch() {
+    if (width != widthPrev || height != heightPrev) {
+      windowResized = true;
+      widthPrev = width;
+      heightPrev = height;
+    }
+    else {
+      windowResized = false; 
+    }
+  }
+  
+  // Returns true if the window was resized, and false if not
+  public boolean resized() {
+    return windowResized; 
   }
 }

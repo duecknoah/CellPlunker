@@ -30,6 +30,7 @@ BlockPlacementUI blockPlacementUI = new BlockPlacementUI();
 BlockSelectionUI blockSelectionUI = new BlockSelectionUI();
 ImageLoader imageDB;
 GUIHandler gui;
+WindowWatcher windowWatcher = new WindowWatcher();
 
 // GUI references
 TextDisplay stepCounter;
@@ -145,6 +146,7 @@ void mouseWheel(MouseEvent event) {
 }
 
 void draw() {
+  windowWatcher.watch(); // checks for window resizing
   cam.userControl();
   gui.update();
   // GUI references
