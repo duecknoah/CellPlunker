@@ -55,12 +55,16 @@ void setup() {
     String[] fragSource = {
         "uniform vec2 pos;",
         "uniform float scale;",
+        "uniform vec2 grid_dim;", // grid dimensions
+        "uniform vec2 screen_dim;", // screen dimensions
         
         "void main() {",
-            "if(fract((gl_FragCoord.x - pos.x) / (scale * 2)) > 0.5 ^ fract((gl_FragCoord.y - pos.y) / (scale * 2)) > 0.5)",
+            "if(fract((gl_FragCoord.x + pos.x) / (scale * 2)) > 0.5 ^ fract((gl_FragCoord.y + pos.y) / (scale * 2)) > 0.5)",
                 "gl_FragColor = vec4(0.1, 0.1, 0.1, 1.0);",
             "else",
                 "gl_FragColor = vec4(0.05, 0.05, 0.05, 1.0);",
+            "if (gl_FragCoord.x + pos.x < 0 || gl_FragCoord.x + pos.x > grid_dim.x * scale || (screen_dim.y - gl_FragCoord.y) + pos.y < 0 || (screen_dim.y - gl_FragCoord.y) + pos.y > grid_dim.y * scale)",
+                "gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);",
         "}"
     };
     gridShader = new PShader(this, vertSource, fragSource);
@@ -145,10 +149,6 @@ void draw() {
   gui.update();
   // GUI references
   stepCounter.text = "Steps: " + stateUpdater.stepsPerSec + "/s";
-  
-  /* TODO
-  camestrictInGrid();
-  */
   // Translations and scaling for zoom and camera panning
   pushMatrix();
   translate(width / 2, height / 2);

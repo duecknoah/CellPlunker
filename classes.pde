@@ -110,38 +110,20 @@ class Grid {
 
   // Draw each cell
   public void draw() {
-    // Draw the grid
+    // Draw the grid shader by setting up the proper arguments and using the shader via 'filter()'
     Position pos = new Position(cam.pos);
     pos.x += width / 2;
     pos.x *= cam.scale;
     pos.x -= width / 2;
-    pos.x -= cam.pos.x;
 
     pos.y += height / 2;
     pos.y *= cam.scale;
     pos.y -= height / 2;
-    pos.y -= cam.pos.y;
 
-    pos.x = cam.pos.x;
-    pos.y = cam.pos.y;
-    /*
-     // Converted to float for better accuracy during calculations with transformations
-     float xpos = pos.x;
-     float ypos = pos.y;
-     xpos -= width / 2;
-     xpos /= cam.scale;
-     xpos += width / 2;
-     xpos += cam.pos.x;
-     
-     ypos -= height / 2;
-     ypos /= cam.scale;
-     ypos += height / 2;
-     ypos += cam.pos.y;
-     return new Position((int) xpos, (int) ypos);
-     */
-
-    gridShader.set("pos", -(float) pos.x, (float) pos.y);
+    gridShader.set("pos", (float)pos.x, (float)pos.y);
     gridShader.set("scale", (float)cam.scale);
+    gridShader.set("grid_dim", (float) grid.getXSize(), (float) grid.getYSize());
+    gridShader.set("screen_dim", (float) width, (float) height);
     filter(gridShader);
 
     // Draw each cell
