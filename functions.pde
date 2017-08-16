@@ -51,13 +51,37 @@ public String idToCellName(int id) {
   }
 }
 
+// Creates a game save, see save_layout.json to see an example output
+public void createSave() {
+  // The Save data json as a whole, this is the one the contains everything and is actually saved
+  JSONObject saveData = new JSONObject();
+  // The jsons within saveData
+  JSONObject gridData = grid.toJSON();
+  JSONObject stateUpdaterData = new JSONObject();
+  // StateUpdater
+  stateUpdaterData.setFloat("stepsPerSec", stateUpdater.getStepsPerSec());
+  
+  // Finally put all of this into saveData and save
+  saveData.setJSONObject("grid", gridData);
+  saveData.setJSONObject("stateUpdater", stateUpdaterData);
+  
+  // TODO, save as compressed file not in raw json
+  saveJSONObject(saveData, "save.json");
+}
+
 // Button functions (clickEvent functions)
 public void loadSave() {
   selectInput("Select a save to load:", "loadSelected");
 }
 
 public void loadSelected(File save) {
- // if (selection
+  if (save == null) {
+    println("No file selection made"); 
+  }
+  else {
+    // Load save
+    println("Loading save: " + save.getAbsolutePath());
+  }
 }
 
 public void setSlowStepSpd() {

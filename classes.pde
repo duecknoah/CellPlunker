@@ -22,6 +22,13 @@ class Position {
     public String toString() {
     return "{x: " + x + ", y: " + y + "}";
   }
+  
+  public JSONObject toJSON() {
+    JSONObject pos = new JSONObject();
+    pos.setInt("x", x);
+    pos.setInt("y", y);
+    return pos;
+  }
 }
 
 class CellUpdateInfo {
@@ -203,6 +210,51 @@ class Grid {
   public int getYSize() {
     return ysize;
   }
+  
+  // Returns a JSONObject representation of the grid
+  public JSONObject toJSON() {
+     JSONObject gridData = new JSONObject();
+     JSONArray cellData = new JSONArray();
+     JSONObject cableUnitData = new JSONObject();
+     // Grid
+     gridData.setInt("width", grid.getXSize());
+     gridData.setInt("height", grid.getYSize());
+     
+     // Loop through grid, and for each cell that exists, put its JSON data
+     // in the cellData JSONArray
+     int cellCount = 0;
+     ArrayList<CableUnit> cableUnitList = new ArrayList<CableUnit>();
+     
+     for (int ix = 0; ix < this.getXSize(); ix ++) {
+       for (int iy = 0; iy < this.getYSize(); iy ++) {
+         Cell c = cellAt(new Position(ix, iy));
+         if (c != null) {
+           cellData.setJSONObject(cellCount, c.toJSON());
+           
+           // Gathering all instances of CableUnits
+           if (c instanceof CableCell) {
+             CableCell cCable = (CableCell) c;
+             CableUnit unit = cCable.getCableUnit();
+             if (unit != null) {
+                if (!cableUnitList.contains(unit))
+                  cableUnitList.add(unit);
+             }
+           }
+           
+           cellCount ++;
+         }
+       }
+     }
+     
+     // Put CableUnit ArrayList into JSON Array
+     for (CableUnit cu : cableUnitList) {
+       cableUnitData.setJSONObject(Integer.toString(cu.hashCode()), cu.toJSON());
+     }
+     
+     gridData.setJSONArray("cells", cellData);
+     gridData.setJSONObject("cableUnits", cableUnitData);
+     return gridData;
+  }
 }
 
 // Holds all the data of which cells just updated, then marks all nearby cells
@@ -290,6 +342,10 @@ class StateUpdater {
         throw new IllegalArgumentException("Unknown update type: " + cInfo.getType());
       }
     }
+  }
+  
+  public float getStepsPerSec() {
+    return stepsPerSec; 
   }
 }
 
@@ -482,7 +538,6 @@ class Camera {
       pos.x = -((width - gridXSizeOnScreen) / 2);
       pos.y = -((height - gridYSizeOnScreen) / 2);
     }
-    println(pos.x + ", " + pos.y);
   }
 
   // Gets a position on the screen and translates it to

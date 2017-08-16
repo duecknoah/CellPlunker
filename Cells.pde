@@ -107,6 +107,15 @@ abstract class Cell {
   public String toString() {
     return "Cell type: " + this.getClass().getName() + ", Position: " + pos.toString() + ", state: " + state;
   }
+  
+  public JSONObject toJSON() {
+    JSONObject cData = new JSONObject();
+    cData.setInt("id", cellToId(this));
+    cData.setJSONObject("pos", pos.toJSON());
+    cData.setBoolean("state", getState());
+    
+    return cData;
+  }
 }
 
 abstract class RotatableCell extends Cell {
@@ -214,6 +223,14 @@ abstract class RotatableCell extends Cell {
     if (getCellInFront() == c)
       return true;
     return false;
+  }
+  
+  @Override
+  // Returns a JSON representation of this cell
+  public JSONObject toJSON() {
+    JSONObject cData = super.toJSON();
+    cData.setInt("orientation", getOrientation());
+    return cData;
   }
 }
 
@@ -537,6 +554,20 @@ class CableUnit {
   public String toString() {
     return "Total cables: " + cables.size() + ", Total neighbors: " + neighbors.size(); 
   }
+  
+  // The JSON representation of this CableUnit.
+  // NOTE that we do not store the cells that are apart of this CableUnit, as the
+  // cells themselves have a reference to the CableUnit they are apart of in the save.
+  public JSONObject toJSON() {
+    JSONObject cData = new JSONObject();
+    JSONArray neighborData = new JSONArray();
+      
+    for (int i = 0; i < neighbors.size(); i ++) {
+      neighborData.setJSONObject(i, neighbors.get(i).pos.toJSON()); 
+    }
+    cData.setJSONArray("neighbors", neighborData);
+    return cData;
+  }
 }
 
 // if any of the cells around it are in an 'on' state, its state is on, otherwise its state is off
@@ -635,6 +666,16 @@ class CableCell extends Cell {
   @Override
   public String toString() {
     return super.toString() + ", CableUnit data: {" + getCableUnit() + "}"; 
+  }
+  
+  @Override
+  public JSONObject toJSON() {
+    JSONObject cData = super.toJSON();
+    if (getCableUnit() != null)
+      cData.setInt("cableUnit", getCableUnit().hashCode());
+    else
+      cData.setInt("cableUnit", -1); // -1 means no cableUnit
+    return cData;
   }
 }
 

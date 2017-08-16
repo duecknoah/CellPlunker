@@ -78,7 +78,7 @@ void setup() {
     
     // Add gui objects here, ex.
     // guiObjects.add(new ButtonText(new GUIPosition(16, -16), LEFT, BOTTOM, "Slow", ""));
-    guiObjects.add(new ButtonText(new GUIPosition(16, 16), "Save", ""));
+    guiObjects.add(new ButtonText(new GUIPosition(16, 16), "Save", "createSave"));
     guiObjects.add(new ButtonText(new GUIPosition(16, 48), "Load", "loadSave"));
     stepCounter = new TextDisplay(new GUIPosition(16, -96, LEFT, BOTTOM), "STEP_COUNTER", 14, #ffffff);
     guiObjects.add(stepCounter);
