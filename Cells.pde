@@ -116,6 +116,24 @@ abstract class Cell {
     
     return cData;
   }
+  
+  // parses a representation of the Cell from JSON into this Cell's actual data. This is used when
+  // loading saves as the save data is in the JSON format.
+  //
+  // Note that this same function is inherited and optionally can be Overrided with @Override to customize for other cells.
+  public void parseJSON(JSONObject json) {
+    pos.parseJSON(json.getJSONObject("pos"));
+    state = json.getBoolean("state"); 
+  }
+  
+  // The same as parseJSON, however this is run after all the cells are loaded in rather than during
+  // this is done as some cells need all the cells to be placed
+  // on the grid first before parsing more data for itself.
+  // ex. WirelessCableCell needs to get its 'other' cell if it is connected to it
+  //
+  // Note that this is empty as it is optionally inherited and used in some
+  // other class's that extend Cell
+  public void parseJSONAfter(JSONObject json) {};
 }
 
 abstract class RotatableCell extends Cell {
@@ -231,6 +249,12 @@ abstract class RotatableCell extends Cell {
     JSONObject cData = super.toJSON();
     cData.setInt("orientation", getOrientation());
     return cData;
+  }
+  
+  @Override
+  public void parseJSON(JSONObject json) {
+    super.parseJSON(json);
+    setOrientation(json.getInt("orientation"));
   }
 }
 
@@ -568,6 +592,19 @@ class CableUnit {
     cData.setJSONArray("neighbors", neighborData);
     return cData;
   }
+  
+  // Parses the json data for this CableUnit
+  // Note that we are only parsing the neighbors of the json, cables are added during the loading process
+  // in the class Grid function parseJSON()
+  public void parseJSON(JSONObject json) {
+    JSONArray nArray = json.getJSONArray("neighbors");
+    
+    for (int i = 0; i < nArray.size(); i ++) {
+      JSONObject n = nArray.getJSONObject(i);
+      Cell nCell = grid.cellAt(new Position(n));
+      neighbors.add(nCell);
+    }
+  }
 }
 
 // if any of the cells around it are in an 'on' state, its state is on, otherwise its state is off
@@ -849,5 +886,31 @@ class WirelessCableCell extends CableCell implements Interactable {
   public void delete() {
     disconnect();
     super.delete(); 
+  }
+  
+  @Override
+  public JSONObject toJSON() {
+    // First do inherited toJSON methods, then add data specific to this
+    // WirelessCableCell
+    JSONObject jsonData = super.toJSON();
+    // Add data of which other WirelessCableCell this is connected to, if any
+    if (hasConnection()) {
+      jsonData.setJSONObject("other", getConnection().pos.toJSON());
+    }
+    else {
+      jsonData.setJSONObject("other", null); // no connection 
+    }
+    return jsonData;
+  }
+  
+  @Override
+  public void parseJSONAfter(JSONObject json) {
+     // If there is supposed to be a connection and it isn't connected yet, connect it to the cell 'other'
+    if (!json.isNull("other") && !hasConnection()) {
+        JSONObject other = json.getJSONObject("other");
+        // the grid is still considered null if we are loading a file, then parsingJSON from it 
+        Cell cOther = grid.cellAt(new Position(other.getInt("x"), other.getInt("y")));
+        connectTo((WirelessCableCell) cOther);
+    }
   }
 }

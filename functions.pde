@@ -74,13 +74,22 @@ public void loadSave() {
   selectInput("Select a save to load:", "loadSelected");
 }
 
-public void loadSelected(File save) {
-  if (save == null) {
+public void loadSelected(File fileSelected) {
+  if (fileSelected == null) {
     println("No file selection made"); 
   }
   else {
     // Load save
-    println("Loading save: " + save.getAbsolutePath());
+    println("Loading save: " + fileSelected.getAbsolutePath());
+    JSONObject saveData = loadJSONObject(fileSelected);
+    try {
+    grid.parseJSON(saveData.getJSONObject("grid"));
+    println("Save loaded successfully with no errors");
+    }
+    catch (Exception e) {
+       e.printStackTrace();
+    }
+    
   }
 }
 

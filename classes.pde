@@ -12,6 +12,11 @@ class Position {
     this.x = pos.x;
     this.y = pos.y;
   }
+  
+  // Creates the position directly off of the json data
+  Position (JSONObject json) {
+    parseJSON(json);
+  }
 
   public void setPos(int x, int y) {
     this.x = x;
@@ -28,6 +33,11 @@ class Position {
     pos.setInt("x", x);
     pos.setInt("y", y);
     return pos;
+  }
+  
+  public void parseJSON(JSONObject json) {
+    this.x = json.getInt("x");
+    this.y = json.getInt("y");
   }
 }
 
@@ -79,23 +89,27 @@ class CellUpdateInfo {
 
 // Holds all Cell data and functions to retrieve cell data
 class Grid {
-  private final int xsize;
-  private final int ysize;
+  private int xsize;
+  private int ysize;
   public boolean viewCellStates = true; // draw cell states? If false, it will draw the label color of the cell instead
   private Cell[][] cells;
-
+  
   Grid (int width, int height) {
     xsize = width;
     ysize = height;
+    resetGrid();
+  }
+  
+  // Clears the grid with null cells
+  public void resetGrid() {
     cells = new Cell[xsize][ysize];
-
     for (int ix = 0; ix < xsize; ix ++) {
       for (int iy = 0; iy < ysize; iy ++) {
         cells[ix][iy] = null; // set cell data as null by default
       }
     }
   }
-
+  
   // Gets the state of a cell at a given position
   public boolean getState(Position pos) {
     if (inBounds(pos)) {
@@ -254,6 +268,67 @@ class Grid {
      gridData.setJSONArray("cells", cellData);
      gridData.setJSONObject("cableUnits", cableUnitData);
      return gridData;
+  }
+  
+  // Parses the JSON representation of some grids data and loads it into the games grid.
+  // This involves setting the width and height of the grid, placing cells, etc.
+  public void parseJSON(JSONObject gridData) {
+    xsize = gridData.getInt("width");
+    ysize = gridData.getInt("height");
+    resetGrid();
+    // Iterate through Cells in JSONArray and create them
+    JSONArray cellData = gridData.getJSONArray("cells");
+    HashMap<Integer, CableUnit> cUnits = new HashMap<Integer, CableUnit>(); // uses the hashCode of the CableUnit to be the index of it in this HashMap
+    JSONObject cableUnitsJSON = gridData.getJSONObject("cableUnits");
+    
+    for (int i = 0; i < cellData.size(); i ++) {
+      JSONObject data = cellData.getJSONObject(i);
+      int id = data.getInt("id");
+      Cell c = idToCell(id, new Position(data.getJSONObject("pos")));
+      c.parseJSON(data);
+      cells[c.pos.x][c.pos.y] = c; // forcefully set the cell on the grid, do not intialize yet
+      
+      // Make this CableCell (if it is one) be part of the correct CableUnit based off the save
+      if (c instanceof CableCell) {
+        int cableUnitHashCode = data.getInt("cableUnit");
+        CableUnit cUnit;
+        CableCell cCable = (CableCell) c;
+        // If this cableUnit has already been created and is part of another cell, then
+        // we know it is part of another Cells CableUnit already created, so lets join theirs
+        if (cUnits.containsKey(cableUnitHashCode)) {
+          cUnit = cUnits.get(cableUnitHashCode);
+          cUnit.cables.add((CableCell) cCable);
+        }
+        else {
+        // Else if this cableUnit has not been used / created yet
+          cUnit = new CableUnit((CableCell) cCable);
+          cUnits.put(cableUnitHashCode, cUnit); // add to list of created CableUnits
+        }
+        cCable.setCableUnit(cUnit);
+      }
+    }
+    
+    // Next run the parseJSONAfter functions for the Cells, this is done as some cells need all the cells to be placed
+    // on the grid first before parsing more data for itself.
+    // ex. WirelessCableCell needs to get its 'other' cell if it is connected to it
+    for (int i = 0; i < cellData.size(); i ++) {
+      JSONObject data = cellData.getJSONObject(i);
+      Cell c = cellAt(new Position(data.getJSONObject("pos")));
+      c.parseJSONAfter(data);
+    }
+    
+    // Next load neighbor data for all of the CableUnits now that all cells are placed
+    for (Integer k : cUnits.keySet()) {
+      JSONArray neighborJSON = cableUnitsJSON.getJSONObject(Integer.toString(k)).getJSONArray("neighbors");
+      ArrayList<Cell> neighbors = new ArrayList<Cell>();
+      // Add each of the neighbors that are apart of this CableUnit to a temporary ArrayList called neighbors
+      for (int i = 0; i < neighborJSON.size(); i ++) {
+        neighbors.add(cellAt(new Position(neighborJSON.getJSONObject(i))));
+      }
+      // Now add this to the CableUnit
+      CableUnit currentUnit = (CableUnit) cUnits.get(k);
+      currentUnit.neighbors = neighbors;
+    }
   }
 }
 
