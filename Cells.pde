@@ -9,11 +9,8 @@ abstract class Cell {
    this.pos = pos; 
   }
   
-  // copy constructor
-  Cell (Cell c) {
-    this.pos = new Position(c.pos);
-    this.state = c.state;
-  }
+  // Returns a copy of the Cell using the prototype pattern
+  protected abstract Cell makeCopy();
    
   // Sets state, then marks this as just updated
   public void setState(boolean newState) {
@@ -140,7 +137,7 @@ abstract class RotatableCell extends Cell {
   protected int orientation = 0;
   
   RotatableCell(Position pos) {
-    super(pos); 
+    super(pos);
   }
   
   public void rotateLeft() {
@@ -266,6 +263,13 @@ class ConstantCell extends Cell {
   }
   
   @Override
+  public ConstantCell makeCopy() {
+    ConstantCell c = new ConstantCell(new Position(this.pos));
+    c.state = this.state;
+    return c;
+  }
+  
+  @Override
   public void setState(boolean newState) {
      // Not legal, don't allow 
      throw new IllegalArgumentException("Cannot set the state of a constant cell!");
@@ -308,6 +312,13 @@ class SwitchCell extends Cell implements Interactable {
    SwitchCell (Position pos) {
       super(pos);
    }
+  
+  @Override
+  protected SwitchCell makeCopy() {
+    SwitchCell c = new SwitchCell(new Position(this.pos));
+    c.state = this.state;
+    return c;
+  }
   
   @Override
   public void intialize() {
@@ -366,6 +377,12 @@ class CableUnit {
     this.cables = new ArrayList<CableCell>();
     this.cables.add(c);
     this.neighbors = new ArrayList<Cell>();
+  }
+  
+  // Copy constructor
+  CableUnit(CableUnit otherUnit) {
+    this.cables = new ArrayList<CableCell>(otherUnit.cables);
+    this.neighbors = new ArrayList<Cell>(otherUnit.neighbors);
   }
   
   // type (short) - see CellUpdateInfo.* for update types
@@ -437,7 +454,7 @@ class CableUnit {
     
     // Get CableCell neighbors and put them in an array
     for (Cell i : neighbors) {
-      if (i instanceof CableCell) {
+      if (i instanceof CableCell) { //<>//
         cableNeighbors[index] = (CableCell) i;
       }
       else {
@@ -617,6 +634,14 @@ class CableCell extends Cell {
   }
   
   @Override
+  protected CableCell makeCopy() {
+    CableCell c = new CableCell(new Position(this.pos));
+    c.state = this.state;
+    c.setCableUnit(new CableUnit(c)); // this is set to a new CableUnit with only itself in it as copying a cableCell's CableUnit would copy all the connected cells as well
+    return c;
+  }
+  
+  @Override
   public void intialize() {
     detectCableUnit();
     cellUpdate();
@@ -724,6 +749,14 @@ class InverterCell extends RotatableCell {
   }
   
   @Override
+  protected InverterCell makeCopy() {
+    InverterCell c = new InverterCell(new Position(this.pos));
+    c.state = this.state;
+    c.orientation = this.orientation;
+    return c;
+  }
+  
+  @Override
   public void intialize() {
     cellUpdate();
     stateUpdater.markCell(this, CellUpdateInfo.cellUpdate);
@@ -778,6 +811,18 @@ class WirelessCableCell extends CableCell implements Interactable {
   WirelessCableCell (Position pos) {
     super(pos); 
     other = null;
+  }
+  
+  @Override
+  protected WirelessCableCell makeCopy() {
+    WirelessCableCell c = new WirelessCableCell(new Position(this.pos));
+    c.setCableUnit(new CableUnit(c));
+    c.state = this.state;
+    // make it so the copied version is no longer connected to anything
+    // This is done as we only want to copy this Cell, and we also don't want the
+    // connected other to affected in any way
+    c.other = null; 
+    return c;
   }
   
   @Override

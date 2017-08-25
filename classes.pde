@@ -100,6 +100,14 @@ class Grid {
     resetGrid();
   }
   
+  // Copy constructor
+  Grid (Grid toCopy) {
+    this.xsize = toCopy.xsize;
+    this.ysize = toCopy.ysize;
+    resetGrid();
+    cells = toCopy.copyGridArea(new Position(0, 0), new Position(toCopy.xsize, toCopy.ysize)).cells;
+  }
+  
   // Clears the grid with null cells
   public void resetGrid() {
     cells = new Cell[xsize][ysize];
@@ -161,6 +169,24 @@ class Grid {
       }
     }
   }
+  
+  // Draws a preview of the grid at the specified position.
+  // This is used when placing a copied section of a grid, as we
+  // want to show a preview of the copied grid over the users mouse
+  public void drawPreview(Position pos) {
+    // Draw each cell
+    pushMatrix();
+    translate(pos.x, pos.y);
+    for (int ix = 0; ix < xsize; ix ++) {
+      for (int iy = 0; iy < ysize; iy ++) {
+        // Draw using cells method if a cell exists there
+        if (cells[ix][iy] != null) {
+            cells[ix][iy].drawPlacePreview();
+        }
+      }
+    }
+    popMatrix();
+  }
 
   public Cell cellAt(Position pos) {
     if (inBounds(pos)) {
@@ -169,7 +195,7 @@ class Grid {
     return null;
   }
 
-  // Attempts to place the desired cell at the specified position.
+  // Attempts to place the desired cell at the specified position. Then intializes it
   // Returns true - successful
   // Returns false - failed to place
   public boolean placeCell(int id, Position pos) {
@@ -198,7 +224,7 @@ class Grid {
     return true;
   }
 
-  // Attempts to place the desired cell at the specified position with the desired orientation.
+  // Attempts to place the desired cell at the specified position with the desired orientation. Then intializes it
   // Returns true - successful
   // Returns false - failed to place
   public boolean placeCell(int id, Position pos, int orientation) {
@@ -216,6 +242,35 @@ class Grid {
     } else throw new IllegalArgumentException("Cannot place a Cell on an orientation when it is not rotatable!"); 
     return true;
   }
+  
+  // Attempts to place the desired cell at the specified position, then intializes it
+  // Returns true - successful
+  // Returns false - failed to place
+  public boolean placeCell(Cell c, Position pos) {
+    if (inBounds(pos) == false)
+      return false;
+    if (cellAt(pos) != null)
+      return false;
+    cells[pos.x][pos.y] = c;
+    c.intialize();
+    return true;
+  }
+  
+  // Will force set the cell at the given position on the grid to the Cell supplied
+  // unlike placeCell() It will NOT update the cell placed 
+  // Returns true if successful
+  // Returns false if out of bounds / not successful
+  public boolean setCell(Cell c, Position pos) {
+    if (c == null)
+      throw new IllegalArgumentException("Cannot create a null cell! Use clearCell() instead");
+    if (inBounds(pos) == false)
+      return false;
+    if (cellAt(pos) != null)
+      clearCell(pos);
+    cells[pos.x][pos.y] = c;
+    c.pos = pos;
+    return true;
+  }
 
   public int getXSize() {
     return xsize;
@@ -223,6 +278,111 @@ class Grid {
 
   public int getYSize() {
     return ysize;
+  }
+  
+  // Copies a selection of the grid (tl - top left) (br - bottom right)
+  // and returns a Grid which is a copy of that area selected
+  // This Grid contains every Cell in the selection, including null Cells
+  public Grid copyGridArea(Position tl, Position br) {
+    // Loop through grid and fill out array
+    int w = br.x - tl.x;
+    int h = br.y - tl.y;
+    Grid selection = new Grid(w, h);
+    
+    for (int ix = tl.x; ix < br.x; ix ++) {
+      for (int iy = tl.y; iy < br.y; iy ++) {
+        Cell toCopy = cellAt(new Position(ix, iy));
+        Cell copiedCell;
+        Position relativePos = new Position(ix - tl.x, iy - tl.y);
+        
+        if (toCopy == null)
+          continue;
+        copiedCell = toCopy.makeCopy();
+        selection.setCell(copiedCell, relativePos);
+      }
+    }
+    
+    // Currently, when WirelessCableCells are individually copied, they lose any connections they had. To fix this, we
+    // check if their other (the connection) is also within the selection,
+    // if it is, mark the new WirelessCableCell (other) that is in the same relative position as its other originally.
+    // Otherwise, leave it as an empty connection
+     for (int ix = tl.x; ix < br.x; ix ++) {
+       for (int iy = tl.y; iy < br.y; iy ++) {
+         Position gridPos = new Position(ix, iy);
+         Position relativePos = new Position(ix - tl.x, iy - tl.y);
+         Cell cOriginal = cellAt(gridPos);
+         Cell cCopy = selection.cellAt(relativePos);
+         
+         // If a WirelessCableCell at this position
+         if (cOriginal instanceof WirelessCableCell) {
+           WirelessCableCell cOriginalWireless = (WirelessCableCell) cOriginal;
+           WirelessCableCell cCopyWireless = (WirelessCableCell) cCopy;
+           
+           WirelessCableCell cOriginalWirelessOther = cOriginalWireless.getConnection();
+           
+           // If there is a connection originally
+           if (cOriginalWirelessOther != null) {
+             // If the connected WirelessCable is inside the selection, then make it so the
+             // copied version also has a connection between the two
+             if (cOriginalWirelessOther.pos.x >= tl.x && cOriginalWirelessOther.pos.y >= tl.y
+             && cOriginalWirelessOther.pos.x < br.x && cOriginalWirelessOther.pos.y < br.y) {
+               // Get the other's position offset relative to the original 
+               Position wirelessOtherOffset = new Position(cOriginalWirelessOther.pos.x - cOriginalWireless.pos.x, cOriginalWirelessOther.pos.y - cOriginalWireless.pos.y);
+               Position cCopyWirelessOtherPos = new Position(cCopyWireless.pos.x + wirelessOtherOffset.x, cCopyWireless.pos.y + wirelessOtherOffset.y);
+               // Now establish the connection!
+               cCopyWireless.connectTo((WirelessCableCell) selection.cellAt(cCopyWirelessOtherPos));
+             }
+           }
+         }
+       }
+     }
+    
+    return selection;
+  }
+  
+  // Selects a part of the grid and removes any cells in it (tl - top left) (br - bottom right)
+  public void removeGridArea(Position tl, Position br) {
+    for (int ix = tl.x; ix <= br.x; ix ++) {
+      for (int iy = tl.y; iy <= br.y; iy ++) {
+        clearCell(new Position(ix, iy));   
+      }
+    }
+  }
+  
+  // Sets the all of the cells in the given selection.
+  // tl - top left (starting position of placement)
+  // placement - the Grid of cells that will be placed
+  public void placeGridArea(Position tl, Grid placement) {
+    int w = placement.getXSize();
+    int h = placement.getYSize();
+    
+    // Loop through each Cell in the grid and clear it, the paste in the Cells
+    // from the placement[][] accordingly
+    for (int ix = 0; ix < w; ix ++) {
+      for (int iy = 0; iy < h; iy ++) {
+        Position gridPos = new Position(tl.x + ix, tl.y + iy);
+        Position relativePos = new Position(ix, iy);
+        Cell toPlace = placement.cellAt(relativePos);
+        
+        // If not an empty cell that we are placing from the selection, the overwrite anything there
+        if (toPlace != null) {
+          clearCell(gridPos);
+          setCell(toPlace, gridPos);
+        }
+      }
+    }
+    // Lastly, do a second pass which will mark anything that will connect the cableunits properly
+    for (int ix = 0; ix < w; ix ++) {
+      for (int iy = 0; iy < h; iy ++) {
+        Position gridPos = new Position(tl.x + ix, tl.y + iy);
+        Cell c = cellAt(gridPos);
+        
+        if (c instanceof CableCell) {
+          CableCell cCable = (CableCell) c;
+          cCable.cellUpdate();
+        }
+      }
+    }
   }
   
   // Returns a JSONObject representation of the grid
@@ -424,13 +584,13 @@ class StateUpdater {
   }
 }
 
-// UI for block selection
-class BlockSelectionUI {
+// UI for block menu (choosing the type of blocks to place)
+class BlockMenuUI {
 
   public boolean isOpened = false;
   private ArrayList<Cell> blocks = new ArrayList<Cell>(); // an instance of each type of block
 
-  BlockSelectionUI() {
+  BlockMenuUI() {
     // Get all types of blocks in the blocks array, used for the block selection and placement preview
     int i = 0;
     Cell nextBlock = idToCell(i, new Position(0, 0));
@@ -501,14 +661,42 @@ class BlockPlacementUI {
 
   Cell previewBlock = idToCell(0, new Position(0, 0)); // the block to preview placing
   Interactable currentInteract = null; // current Cell being interacted with
+  private Grid selection = null; // current selection for copying to and from the grid
+  private boolean isSelecting = false; // is the user currently selecting a portion of the grid?
+  private Position selectionTL, selectionBR; // the top left and bottom right positions of the selection
 
   public void update() {
     // Allow placement if user is holding a block, and draw a preview of what it
     // would look like placed there
-    if (blockSelectionUI.isOpened == false) {
+    if (blockMenuUI.isOpened == false) {
+      // Block selection ending
+      if (Mouse.justReleased) {
+        // We use Mouse.buttonRecent as the default mousePressed with Processing will
+        // only show the button currently pressed. This means when the mouseButton is released
+        // the mouseButton is set to 0 rather than showing which button was most recently pressed.
+        if (Mouse.buttonRecent == CENTER) {
+          if (selection == null)
+            endSelection();
+        } 
+      }
       if (mousePressed) {
+        if (Mouse.justPressed) {
+          // Selection of blocks and placement of blocks
+          if (mouseButton == CENTER) {
+            if (selection == null) {
+              initSelection();
+            }
+            else {
+              placeSelection(); 
+            }
+          }
+          else {
+            // Else if another button was pressed, make the selection empty
+            selection = null; 
+          }
+        }
         // Cell placement
-        if (mouseButton == LEFT && user.heldBlock != -1) {
+        if (mouseButton == LEFT) {
           if (previewBlock instanceof RotatableCell) {
             RotatableCell c = (RotatableCell) previewBlock;
             grid.placeCell(user.heldBlock, new Position(previewBlock.pos), c.getOrientation());
@@ -522,6 +710,7 @@ class BlockPlacementUI {
           }
         }
       }
+      
       boolean isInteracting = (currentInteract == null) ? false : true;
       if (keyPressed) {
         // Cell interaction
@@ -555,21 +744,74 @@ class BlockPlacementUI {
         keyPressed = false;
       }
     }
+    // Block selection
+    if (isSelecting) {
+      updateSelection(); 
+    }
+    // Update preview block position
+    previewBlock.pos.x = mouseX;
+    previewBlock.pos.y = mouseY;
+    previewBlock.pos = cam.screenToGridPos(previewBlock.pos);
     this.draw();
   }
 
   public void draw() {
-    if (user.heldBlock != -1) {
-      previewBlock.pos.x = mouseX;
-      previewBlock.pos.y = mouseY;
-      previewBlock.pos = cam.screenToGridPos(previewBlock.pos);
+    if (user.heldBlock != -1 && selection == null) {
       previewBlock.drawPlacePreview();
     }
+    // Block selection highlighting
+    if (isSelecting) {
+      fill(#C66BF7, 127);
+      rect(selectionTL.x, selectionTL.y, selectionBR.x - selectionTL.x, selectionBR.y - selectionTL.y);
+      fill(255); // reset
+    }
+    if (selection != null) {
+      selection.drawPreview(previewBlock.pos);
+    }
+  }
+  
+  public void initSelection() {
+    isSelecting = true; 
+    selectionTL = new Position(previewBlock.pos);
+    selectionBR = new Position(previewBlock.pos); 
+  }
+  
+  public void updateSelection() {
+    selectionBR = new Position(previewBlock.pos);  
+  }
+  
+  public void endSelection() {
+    isSelecting = false;
+    // If nothing selected, make selection null
+    if (selectionTL.x == selectionBR.x && selectionTL.y == selectionBR.y) {
+      selection = null;
+      return;
+    }
+    // Make it so the top left actually is the top left of the selection and make sure the bottom right
+    // actually is the bottom right of the selection. This is done as the user may selection from bottom
+    // right to top left, from bottom left to top right, etc. Not preventing this would make it copy backwards or upside down
+    if (selectionTL.x > selectionBR.x) {
+      int hold = selectionTL.x;
+      selectionTL.x = selectionBR.x;
+      selectionBR.x = hold;
+    }
+    if (selectionTL.y > selectionBR.y) {
+      int hold = selectionTL.y;
+      selectionTL.y = selectionBR.y;
+      selectionBR.y = hold;
+    }
+    selection = grid.copyGridArea(selectionTL, selectionBR);
+  }
+  
+  public void placeSelection() {
+    // First make a copy of the selection
+    Grid copiedSelection = new Grid(selection);
+    grid.placeGridArea(new Position(previewBlock.pos), copiedSelection); 
   }
 }
 
 class User {
-  public int heldBlock = -1; // a # representing the block that the user is holding to place
+  public int heldBlock = 0; // a # representing the block that the user is holding to place
 }
 
 class Camera {
@@ -638,11 +880,25 @@ static class Keyboard {
   public static HashMap<Character, Boolean> keys = new HashMap<Character, Boolean>();
 }
 
+// This adds some extra useful data about the mouse that Processing's default
+// mousePressed and mouseButton do not provide
 static class Mouse {
   public static int wheelCount = 0;
+  // Mouse events, see void mousePressed() and void mouseReleased() for how they are affected
+  public static boolean justPressed = false; // is triggered when the mouse is just pressed
+  public static boolean justReleased = false; // is triggered when the mouse is just released
+  public static int buttonRecent = 0; // the most recent mouse button pressed
 
-  public static void resetWheelCount() {
+  private static void resetWheelCount() {
     wheelCount = 0;
+  }
+  
+  // Should be run at the end of each frame to ensure mouse is counted as pressed, released, or
+  // scrolling more than it should be
+  public static void resetMouseEvents() {
+     resetWheelCount();
+     justPressed = false;
+     justReleased = false;
   }
 }
 

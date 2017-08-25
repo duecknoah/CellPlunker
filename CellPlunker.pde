@@ -27,7 +27,7 @@ StateUpdater stateUpdater = new StateUpdater();
 Camera cam = new Camera();
 User user = new User();
 BlockPlacementUI blockPlacementUI = new BlockPlacementUI();
-BlockSelectionUI blockSelectionUI = new BlockSelectionUI();
+BlockMenuUI blockMenuUI = new BlockMenuUI();
 ImageLoader imageDB;
 GUIHandler gui;
 WindowWatcher windowWatcher = new WindowWatcher();
@@ -107,7 +107,7 @@ void keyPressed() {
     break;
     case 'q':
     case 'Q':
-      blockSelectionUI.isOpened = !blockSelectionUI.isOpened;
+      blockMenuUI.isOpened = !blockMenuUI.isOpened;
     break;
     case 'r': // rotate block selected if that type of block
     case 'R':
@@ -118,7 +118,7 @@ void keyPressed() {
     break;
     case 'v':
     case 'V':
-      if (blockSelectionUI.isOpened == false) {
+      if (blockMenuUI.isOpened == false) {
         Cell hovering = grid.cellAt(blockPlacementUI.previewBlock.pos);
         if (hovering != null) {
           println(hovering.toString()); // prints cell info
@@ -145,6 +145,16 @@ void mouseWheel(MouseEvent event) {
   Mouse.wheelCount = event.getCount();
 }
 
+void mousePressed(MouseEvent event) {
+  Mouse.justPressed = true;
+  Mouse.buttonRecent = mouseButton;
+}
+
+void mouseReleased(MouseEvent event) {
+  Mouse.justReleased = true;
+}
+
+// The game loop
 void draw() {
   windowWatcher.watch(); // checks for window resizing
   cam.userControl();
@@ -161,12 +171,12 @@ void draw() {
   blockPlacementUI.update();
   popMatrix();
   fill(255);
-  blockSelectionUI.update();
+  blockMenuUI.update();
   gui.draw();
   fill(255);
   int yOffset = 64;
   text("FPS: " + round(frameRate), 16, 16 + yOffset);
-  Mouse.resetWheelCount();
+  Mouse.resetMouseEvents();
   // Lastly do the updates for the state updater
   stateUpdater.update();
 }
