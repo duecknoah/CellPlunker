@@ -9,11 +9,8 @@ abstract class Cell {
    this.pos = pos; 
   }
   
-  // copy constructor
-  Cell (Cell c) {
-    this.pos = new Position(c.pos);
-    this.state = c.state;
-  }
+  // Returns a copy of the Cell using the prototype pattern
+  protected abstract Cell makeCopy();
    
   // Sets state, then marks this as just updated
   public void setState(boolean newState) {
@@ -107,13 +104,40 @@ abstract class Cell {
   public String toString() {
     return "Cell type: " + this.getClass().getName() + ", Position: " + pos.toString() + ", state: " + state;
   }
+  
+  public JSONObject toJSON() {
+    JSONObject cData = new JSONObject();
+    cData.setInt("id", cellToId(this));
+    cData.setJSONObject("pos", pos.toJSON());
+    cData.setBoolean("state", getState());
+    
+    return cData;
+  }
+  
+  // parses a representation of the Cell from JSON into this Cell's actual data. This is used when
+  // loading saves as the save data is in the JSON format.
+  //
+  // Note that this same function is inherited and optionally can be Overrided with @Override to customize for other cells.
+  public void parseJSON(JSONObject json) {
+    pos.parseJSON(json.getJSONObject("pos"));
+    state = json.getBoolean("state"); 
+  }
+  
+  // The same as parseJSON, however this is run after all the cells are loaded in rather than during
+  // this is done as some cells need all the cells to be placed
+  // on the grid first before parsing more data for itself.
+  // ex. WirelessCableCell needs to get its 'other' cell if it is connected to it
+  //
+  // Note that this is empty as it is optionally inherited and used in some
+  // other class's that extend Cell
+  public void parseJSONAfter(JSONObject json) {};
 }
 
 abstract class RotatableCell extends Cell {
   protected int orientation = 0;
   
   RotatableCell(Position pos) {
-    super(pos); 
+    super(pos);
   }
   
   public void rotateLeft() {
@@ -215,6 +239,20 @@ abstract class RotatableCell extends Cell {
       return true;
     return false;
   }
+  
+  @Override
+  // Returns a JSON representation of this cell
+  public JSONObject toJSON() {
+    JSONObject cData = super.toJSON();
+    cData.setInt("orientation", getOrientation());
+    return cData;
+  }
+  
+  @Override
+  public void parseJSON(JSONObject json) {
+    super.parseJSON(json);
+    setOrientation(json.getInt("orientation"));
+  }
 }
 
 // A cell that is constantly on and cannot be turned off
@@ -222,6 +260,13 @@ class ConstantCell extends Cell {
   public final static int labelCol = #001eff;
   ConstantCell(Position pos) {
      super(pos);
+  }
+  
+  @Override
+  public ConstantCell makeCopy() {
+    ConstantCell c = new ConstantCell(new Position(this.pos));
+    c.state = this.state;
+    return c;
   }
   
   @Override
@@ -267,6 +312,13 @@ class SwitchCell extends Cell implements Interactable {
    SwitchCell (Position pos) {
       super(pos);
    }
+  
+  @Override
+  protected SwitchCell makeCopy() {
+    SwitchCell c = new SwitchCell(new Position(this.pos));
+    c.state = this.state;
+    return c;
+  }
   
   @Override
   public void intialize() {
@@ -325,6 +377,12 @@ class CableUnit {
     this.cables = new ArrayList<CableCell>();
     this.cables.add(c);
     this.neighbors = new ArrayList<Cell>();
+  }
+  
+  // Copy constructor
+  CableUnit(CableUnit otherUnit) {
+    this.cables = new ArrayList<CableCell>(otherUnit.cables);
+    this.neighbors = new ArrayList<Cell>(otherUnit.neighbors);
   }
   
   // type (short) - see CellUpdateInfo.* for update types
@@ -396,7 +454,7 @@ class CableUnit {
     
     // Get CableCell neighbors and put them in an array
     for (Cell i : neighbors) {
-      if (i instanceof CableCell) {
+      if (i instanceof CableCell) { //<>//
         cableNeighbors[index] = (CableCell) i;
       }
       else {
@@ -537,6 +595,33 @@ class CableUnit {
   public String toString() {
     return "Total cables: " + cables.size() + ", Total neighbors: " + neighbors.size(); 
   }
+  
+  // The JSON representation of this CableUnit.
+  // NOTE that we do not store the cells that are apart of this CableUnit, as the
+  // cells themselves have a reference to the CableUnit they are apart of in the save.
+  public JSONObject toJSON() {
+    JSONObject cData = new JSONObject();
+    JSONArray neighborData = new JSONArray();
+      
+    for (int i = 0; i < neighbors.size(); i ++) {
+      neighborData.setJSONObject(i, neighbors.get(i).pos.toJSON()); 
+    }
+    cData.setJSONArray("neighbors", neighborData);
+    return cData;
+  }
+  
+  // Parses the json data for this CableUnit
+  // Note that we are only parsing the neighbors of the json, cables are added during the loading process
+  // in the class Grid function parseJSON()
+  public void parseJSON(JSONObject json) {
+    JSONArray nArray = json.getJSONArray("neighbors");
+    
+    for (int i = 0; i < nArray.size(); i ++) {
+      JSONObject n = nArray.getJSONObject(i);
+      Cell nCell = grid.cellAt(new Position(n));
+      neighbors.add(nCell);
+    }
+  }
 }
 
 // if any of the cells around it are in an 'on' state, its state is on, otherwise its state is off
@@ -546,6 +631,14 @@ class CableCell extends Cell {
   
   CableCell(Position pos) {
      super(pos); 
+  }
+  
+  @Override
+  protected CableCell makeCopy() {
+    CableCell c = new CableCell(new Position(this.pos));
+    c.state = this.state;
+    c.setCableUnit(new CableUnit(c)); // this is set to a new CableUnit with only itself in it as copying a cableCell's CableUnit would copy all the connected cells as well
+    return c;
   }
   
   @Override
@@ -636,6 +729,16 @@ class CableCell extends Cell {
   public String toString() {
     return super.toString() + ", CableUnit data: {" + getCableUnit() + "}"; 
   }
+  
+  @Override
+  public JSONObject toJSON() {
+    JSONObject cData = super.toJSON();
+    if (getCableUnit() != null)
+      cData.setInt("cableUnit", getCableUnit().hashCode());
+    else
+      cData.setInt("cableUnit", -1); // -1 means no cableUnit
+    return cData;
+  }
 }
 
 // if any of the cells around it are in an 'on' state, its state is off, otherwise its state is on
@@ -643,6 +746,14 @@ class InverterCell extends RotatableCell {
   
   InverterCell(Position pos) {
      super(pos); 
+  }
+  
+  @Override
+  protected InverterCell makeCopy() {
+    InverterCell c = new InverterCell(new Position(this.pos));
+    c.state = this.state;
+    c.orientation = this.orientation;
+    return c;
   }
   
   @Override
@@ -700,6 +811,18 @@ class WirelessCableCell extends CableCell implements Interactable {
   WirelessCableCell (Position pos) {
     super(pos); 
     other = null;
+  }
+  
+  @Override
+  protected WirelessCableCell makeCopy() {
+    WirelessCableCell c = new WirelessCableCell(new Position(this.pos));
+    c.setCableUnit(new CableUnit(c));
+    c.state = this.state;
+    // make it so the copied version is no longer connected to anything
+    // This is done as we only want to copy this Cell, and we also don't want the
+    // connected other to affected in any way
+    c.other = null; 
+    return c;
   }
   
   @Override
@@ -808,5 +931,31 @@ class WirelessCableCell extends CableCell implements Interactable {
   public void delete() {
     disconnect();
     super.delete(); 
+  }
+  
+  @Override
+  public JSONObject toJSON() {
+    // First do inherited toJSON methods, then add data specific to this
+    // WirelessCableCell
+    JSONObject jsonData = super.toJSON();
+    // Add data of which other WirelessCableCell this is connected to, if any
+    if (hasConnection()) {
+      jsonData.setJSONObject("other", getConnection().pos.toJSON());
+    }
+    else {
+      jsonData.setJSONObject("other", null); // no connection 
+    }
+    return jsonData;
+  }
+  
+  @Override
+  public void parseJSONAfter(JSONObject json) {
+     // If there is supposed to be a connection and it isn't connected yet, connect it to the cell 'other'
+    if (!json.isNull("other") && !hasConnection()) {
+        JSONObject other = json.getJSONObject("other");
+        // the grid is still considered null if we are loading a file, then parsingJSON from it 
+        Cell cOther = grid.cellAt(new Position(other.getInt("x"), other.getInt("y")));
+        connectTo((WirelessCableCell) cOther);
+    }
   }
 }

@@ -19,13 +19,21 @@ dynamic
 */
 
 PShader gridShader;
+PFont fnt_main_12;
+PFont fnt_main_16;
 
 Grid grid = new Grid(500, 500);
 StateUpdater stateUpdater = new StateUpdater();
 Camera cam = new Camera();
 User user = new User();
 BlockPlacementUI blockPlacementUI = new BlockPlacementUI();
-BlockSelectionUI blockSelectionUI = new BlockSelectionUI();
+BlockMenuUI blockMenuUI = new BlockMenuUI();
+ImageLoader imageDB;
+GUIHandler gui;
+WindowWatcher windowWatcher = new WindowWatcher();
+
+// GUI references
+TextDisplay stepCounter;
 
 void setup() {
   size(500, 500, P2D);
@@ -48,16 +56,38 @@ void setup() {
     String[] fragSource = {
         "uniform vec2 pos;",
         "uniform float scale;",
+        "uniform vec2 grid_dim;", // grid dimensions
+        "uniform vec2 screen_dim;", // screen dimensions
         
         "void main() {",
-            "if(fract((gl_FragCoord.x - pos.x) / (scale * 2)) > 0.5 ^ fract((gl_FragCoord.y - pos.y) / (scale * 2)) > 0.5)",
+            "if(fract((gl_FragCoord.x + pos.x) / (scale * 2)) > 0.5 ^ fract((gl_FragCoord.y + pos.y) / (scale * 2)) > 0.5)",
                 "gl_FragColor = vec4(0.1, 0.1, 0.1, 1.0);",
             "else",
                 "gl_FragColor = vec4(0.05, 0.05, 0.05, 1.0);",
+            "if (gl_FragCoord.x + pos.x < 0 || gl_FragCoord.x + pos.x > grid_dim.x * scale || (screen_dim.y - gl_FragCoord.y) + pos.y < 0 || (screen_dim.y - gl_FragCoord.y) + pos.y > grid_dim.y * scale)",
+                "gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);",
         "}"
     };
     gridShader = new PShader(this, vertSource, fragSource);
-  //gridShader = loadShader("GridFrag.glsl", "GridVert.glsl");
+    /////////////////// Image and GUI ///////////////////
+    imageDB = new ImageLoader();
+    fnt_main_12 = loadFont("data/OpenSans-12.vlw");
+    fnt_main_16 = loadFont("data/OpenSans-16.vlw");
+    textFont(fnt_main_12);
+    ArrayList<GUIObject> guiObjects = new ArrayList<GUIObject>();
+    
+    // Add gui objects here, ex.
+    // guiObjects.add(new ButtonText(new GUIPosition(16, -16), LEFT, BOTTOM, "Slow", ""));
+    guiObjects.add(new ButtonText(new GUIPosition(16, 16), "Save", "createSave"));
+    guiObjects.add(new ButtonText(new GUIPosition(16, 48), "Load", "loadSave"));
+    stepCounter = new TextDisplay(new GUIPosition(16, -96, LEFT, BOTTOM), "STEP_COUNTER", 14, #ffffff);
+    guiObjects.add(stepCounter);
+    guiObjects.add(new ButtonText(new GUIPosition(16, -64, LEFT, BOTTOM), "Fast", "setFastStepSpd"));
+    guiObjects.add(new ButtonText(new GUIPosition(16, -32, LEFT, BOTTOM), "Slow", "setSlowStepSpd"));
+    guiObjects.add(new ButtonSmall(new GUIPosition(-16 + -26, 16, RIGHT, TOP), "?", ""));
+    
+    gui = new GUIHandler(guiObjects);
+    
 }
 
 void keyPressed() {
@@ -77,7 +107,7 @@ void keyPressed() {
     break;
     case 'q':
     case 'Q':
-      blockSelectionUI.isOpened = !blockSelectionUI.isOpened;
+      blockMenuUI.isOpened = !blockMenuUI.isOpened;
     break;
     case 'r': // rotate block selected if that type of block
     case 'R':
@@ -88,7 +118,7 @@ void keyPressed() {
     break;
     case 'v':
     case 'V':
-      if (blockSelectionUI.isOpened == false) {
+      if (blockMenuUI.isOpened == false) {
         Cell hovering = grid.cellAt(blockPlacementUI.previewBlock.pos);
         if (hovering != null) {
           println(hovering.toString()); // prints cell info
@@ -115,11 +145,23 @@ void mouseWheel(MouseEvent event) {
   Mouse.wheelCount = event.getCount();
 }
 
+void mousePressed(MouseEvent event) {
+  Mouse.justPressed = true;
+  Mouse.buttonRecent = mouseButton;
+}
+
+void mouseReleased(MouseEvent event) {
+  Mouse.justReleased = true;
+}
+
+// The game loop
 void draw() {
+  windowWatcher.watch(); // checks for window resizing
   cam.userControl();
-  //camestrictInGrid();
-  
-  background(#555555);
+  gui.update();
+  // GUI references
+  stepCounter.text = "Steps: " + stateUpdater.stepsPerSec + "/s";
+  // Translations and scaling for zoom and camera panning
   pushMatrix();
   translate(width / 2, height / 2);
   scale(cam.scale);
@@ -129,13 +171,12 @@ void draw() {
   blockPlacementUI.update();
   popMatrix();
   fill(255);
-  blockSelectionUI.update();
-  stateUpdater.update();
+  blockMenuUI.update();
+  gui.draw();
   fill(255);
-  text("FPS: " + round(frameRate), 16, 16);
-  Position mousePos = cam.screenToGridPos(new Position(mouseX, mouseY));
-  text("mouseX: " + mousePos.x + ", mouseY: " + mousePos.y, 16, 32);
-  text("camX: " + cam.pos.x + ", camY: " + cam.pos.y, 16, 48);
-  text("maxSteps: " + stateUpdater.maxSteps, 16, 64);
-  Mouse.resetWheelCount();
+  int yOffset = 64;
+  text("FPS: " + round(frameRate), 16, 16 + yOffset);
+  Mouse.resetMouseEvents();
+  // Lastly do the updates for the state updater
+  stateUpdater.update();
 }
