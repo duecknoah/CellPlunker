@@ -260,7 +260,8 @@ abstract class RotatableCell extends Cell {
 
 // A cell that is constantly on and cannot be turned off
 class ConstantCell extends Cell {
-    public final static int labelCol = #001eff;
+    public final static int OUTER_COL = #001eff;
+    public final static int INNER_COL = #fff568;
     ConstantCell(Position pos) {
         super(pos);
     }
@@ -298,9 +299,15 @@ class ConstantCell extends Cell {
 
     // Draws the colored label that represents this cell
     public void draw() {
-        fill(labelCol);
+        // Outer drawing
+        fill(OUTER_COL);
         noStroke();
         rect(pos.x, pos.y, 1, 1);
+        // Inner drawing
+        float padding = 0.25;
+        fill(INNER_COL);
+        noStroke();
+        rect(pos.x + padding, pos.y + padding, 1 - (padding * 2), 1 - (padding * 2));
     }
 }
 
@@ -313,7 +320,10 @@ interface Interactable {
 
 // A static cell that can be turned on or off
 class SwitchCell extends Cell implements Interactable {
-    public final static int labelCol = #7f8eff;
+    public final static int OUTER_COL = #001eff;
+    public final static int INNER_ON_COL = #fff568;
+    public final static int INNER_OFF_COL = #827b00;
+    
     SwitchCell (Position pos) {
         super(pos);
     }
@@ -364,9 +374,33 @@ class SwitchCell extends Cell implements Interactable {
 
     // Draws the colored label that represents this cell
     public void draw() {
-        fill(labelCol);
+        // Outer drawing
+        fill(OUTER_COL);
         noStroke();
         rect(pos.x, pos.y, 1, 1);
+        // Inner top drawing
+        final float padding = 0.15;
+        final float totalInnerHeight = 1 - (padding * 2);
+        final float totalInnerWidth = totalInnerHeight;
+        final float topHeightPerc = 0.75; // Percent of the inner height to take up for the top
+        final float bottomHeightPerc = 1 - topHeightPerc; // the percentage of the rest of the height to take up for the bottom
+        final float topHeight = totalInnerHeight * topHeightPerc; // Actual height for top
+        final float bottomHeight = totalInnerHeight * bottomHeightPerc; // Actual height for bottom
+        
+        // Inner top drawing
+        if (getState() == true) {
+            fill(INNER_ON_COL);
+        }
+        else fill(INNER_OFF_COL);
+        noStroke();
+        rect(pos.x + padding, pos.y + padding, totalInnerWidth, topHeight);
+        // Inner bottom drawing
+        if (getState() == true) {
+            fill(INNER_OFF_COL);
+        }
+        else fill(INNER_ON_COL);
+        noStroke();
+        rect(pos.x + padding, pos.y + padding + topHeight, totalInnerWidth, bottomHeight);
     }
 }
 
