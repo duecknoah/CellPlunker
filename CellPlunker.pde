@@ -34,6 +34,7 @@ WindowWatcher windowWatcher = new WindowWatcher();
 
 // GUI references
 TextDisplay stepCounter;
+TextDisplay helpMenu;
 
 void setup() {
     size(500, 500, P2D);
@@ -74,18 +75,37 @@ void setup() {
     fnt_main_12 = loadFont("data/OpenSans-12.vlw");
     fnt_main_16 = loadFont("data/OpenSans-16.vlw");
     textFont(fnt_main_12);
-    ArrayList<GUIObject> guiObjects = new ArrayList<GUIObject>();
+    ArrayList<AbstractGUIObject> guiObjects = new ArrayList<AbstractGUIObject>();
 
     // Add gui objects here, ex.
     // guiObjects.add(new ButtonText(new GUIPosition(16, -16), LEFT, BOTTOM, "Slow", ""));
     guiObjects.add(new ButtonText(new GUIPosition(16, 16), "Save", "createSave"));
     guiObjects.add(new ButtonText(new GUIPosition(16, 48), "Load", "loadSave"));
-    stepCounter = new TextDisplay(new GUIPosition(16, -96, LEFT, BOTTOM), "STEP_COUNTER", 14, #ffffff);
+    stepCounter = new TextDisplay(new GUIPosition(16, -96, LEFT, BOTTOM), 128, 128, "STEP_COUNTER", 14, #ffffff);
     guiObjects.add(stepCounter);
     guiObjects.add(new ButtonText(new GUIPosition(16, -64, LEFT, BOTTOM), "Fast", "setFastStepSpd"));
     guiObjects.add(new ButtonText(new GUIPosition(16, -32, LEFT, BOTTOM), "Slow", "setSlowStepSpd"));
-    guiObjects.add(new ButtonSmall(new GUIPosition(-16 + -26, 16, RIGHT, TOP), "?", ""));
-
+    guiObjects.add(new ButtonSmall(new GUIPosition(-16 + -26, 16, RIGHT, TOP), "?", "toggleHelpMenu"));
+    helpMenu = new TextDisplay(new GUIPosition(-16 + -256, 42, RIGHT, TOP), 256, 288, 
+        "Help Menu:\n"
+        + "General Keys:\n"
+        + "'q' - toggle block menu\n"
+        + "'e' - toggle state view\n"
+        + "'r' - rotate selected cell\n"
+        + "Movement Keys:\n"
+        + "'w' - move up\n"
+        + "'a' - move left\n"
+        + "'s' - move down\n"
+        + "'d' - move right\n"
+        + "Mouse:\n"
+        + "'Left click' - place selected cell\n"
+        + "'Middle drag' - make selection\n"
+        + "'Middle click' - place current selection\n"
+        + "'Right click' - remove selected cell\n"
+        + "'Scroll Up/Down' - zoom in/out", 14, #ffffff);
+    helpMenu.setBackgroundColor(color(0, 0, 0, 127));
+    guiObjects.add(helpMenu);
+    
     gui = new GUIHandler(guiObjects);
 }
 

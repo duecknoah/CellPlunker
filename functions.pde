@@ -97,3 +97,9 @@ public void setSlowStepSpd() {
 public void setFastStepSpd() {
     stateUpdater.stepsPerSec = 16;
 }
+
+// Toggles viewing of the help menu. This is run when the '?' button at the top right of the screen
+// is pressed
+public void toggleHelpMenu() {
+    helpMenu.setIsEnabled(!helpMenu.getIsEnabled());
+}

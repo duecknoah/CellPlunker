@@ -980,17 +980,26 @@ class GUIPosition {
     }
 }
 
-interface GUIObject {
-    public void update();
-    public void draw();
+abstract class AbstractGUIObject {
+    protected boolean isEnabled = true; // is this gui object on? When not enabled, it is not displayed nor updated
+    abstract public void update();
+    abstract public void draw();
+    // is the gui object displayed?
+    public boolean getIsEnabled() {
+        return isEnabled;
+    }
+    // make the gui object displayed or hidden
+    public void setIsEnabled(boolean isEnabled) {
+        this.isEnabled = isEnabled;
+    };
 }
 
-interface GUIClickable extends GUIObject {
-    public void clickEvent(); // action performed when the user clicks a gui clickable
-    public boolean isClicked(); // returns true if the clickable was just clicked
-    public boolean isHovering(); // returns true if the user is hovering over this
-    public boolean mouseEntered(); // returns true if the mouse just entered where the button is
-    public boolean mouseExited(); // returns true if the mouse just left when the button is
+abstract class AbstractGUIClickable extends AbstractGUIObject {
+    abstract public void clickEvent(); // action performed when the user clicks a gui clickable
+    abstract public boolean isClicked(); // returns true if the clickable was just clicked
+    abstract public boolean isHovering(); // returns true if the user is hovering over this
+    abstract public boolean mouseEntered(); // returns true if the mouse just entered where the button is
+    abstract public boolean mouseExited(); // returns true if the mouse just left when the button is
 }
 
 // This is here to be used in the gui handler when recognizing if a
@@ -998,10 +1007,10 @@ interface GUIClickable extends GUIObject {
 // of the GUIObject, it is very abstract to which type of gui object it is categorized under.
 // so this is meant to keep all of the displayable / non-clickable gui objects under one category
 // separate from the other objects like GUIClickable.
-interface GUIDisplayable extends GUIObject {
+abstract class AbstractGUIDisplayable extends AbstractGUIObject {
 };
 
-abstract class Button implements GUIClickable {
+abstract class Button extends AbstractGUIClickable {
     protected GUIPosition pos; // top left position of the button
     // Images
     protected PImage image_nohover = null;
@@ -1021,7 +1030,7 @@ abstract class Button implements GUIClickable {
      of Java. However, they do provide a way using the function 'method(String methodName)' to 
      run a public method with no args.
      */
-    private String clickEventMethod; 
+    private String clickEventMethod;
 
     Button (GUIPosition pos, String clickEventMethod) {
         this.pos = pos;
@@ -1143,24 +1152,32 @@ class ButtonSmall extends Button {
     }
 }
 
-class TextDisplay implements GUIDisplayable {
-    public GUIPosition pos;
+class TextDisplay extends AbstractGUIDisplayable {
+    public GUIPosition pos; // the position of the text box
+    public float w; // the width of the text box
+    public float h; // the height of the text box
     public String text;
     public int fontSize;
     public color fontColor;
+    public color backgroundColor = -1;
 
-    TextDisplay(GUIPosition pos, String text) {
+    TextDisplay(GUIPosition pos, float w, float h, String text) {
         this.pos = pos;
+        this.w = w;
+        this.h = h;
         this.text = text;
         this.fontSize = 12;
         this.fontColor = #ffffff; // white
     }
 
-    TextDisplay(GUIPosition pos, String text, int fontSize, color fontColor) {
-        this.pos = pos;
-        this.text = text;
+    TextDisplay(GUIPosition pos, float w, float h, String text, int fontSize, color fontColor) {
+        this(pos, w, h, text);
         this.fontSize = fontSize;
         this.fontColor = fontColor;
+    }
+
+    public void setBackgroundColor(color backgroundColor) {
+        this.backgroundColor = backgroundColor;   
     }
 
     public void update() {
@@ -1168,15 +1185,21 @@ class TextDisplay implements GUIDisplayable {
     }
 
     public void draw() {
-        fill(fontColor);
+        // Background
+        if (backgroundColor != -1) {
+            fill(backgroundColor);
+            rect(pos.getX(), pos.getY(), w, h);
+            fill(fontColor);
+        }
+        // Text
         textSize(fontSize);
-        text(text, pos.getX(), pos.getY());
+        text(text, pos.getX(), pos.getY(), w, h);
         textSize(12); // reset
         fill(255); // reset
     }
 }
 
-class ImageDisplay implements GUIDisplayable {
+class ImageDisplay extends AbstractGUIDisplayable {
     public GUIPosition pos;
     public PImage image;
 
@@ -1196,34 +1219,34 @@ class ImageDisplay implements GUIDisplayable {
 
 // This class handles all of the gui drawing and updating
 class GUIHandler {
-    private ArrayList<GUIClickable> clickables;
-    private ArrayList<GUIDisplayable> displayables;
+    private ArrayList<AbstractGUIClickable> clickables;
+    private ArrayList<AbstractGUIDisplayable> displayables;
 
     GUIHandler () {
         init();
     }
 
-    GUIHandler(ArrayList<GUIObject> guiObjects) {
+    GUIHandler(ArrayList<AbstractGUIObject> guiObjects) {
         init();
         addGUIObjects(guiObjects);
     }
 
     // Initialize
     private void init() {
-        clickables = new ArrayList<GUIClickable>();
-        displayables = new ArrayList<GUIDisplayable>();
+        clickables = new ArrayList<AbstractGUIClickable>();
+        displayables = new ArrayList<AbstractGUIDisplayable>();
     }
 
     // Adds an arraylist of guiobjects to the GUIHandler
-    public void addGUIObjects(ArrayList<GUIObject> guiObjects) {
+    public void addGUIObjects(ArrayList<AbstractGUIObject> guiObjects) {
         // Add all of the guiObjects into their specific containers
-        for (GUIObject i : guiObjects) {
-            if (i instanceof GUIClickable) {
-                clickables.add((GUIClickable) i); 
+        for (AbstractGUIObject i : guiObjects) {
+            if (i instanceof AbstractGUIClickable) {
+                clickables.add((AbstractGUIClickable) i); 
                 continue;
             }
-            if (i instanceof GUIDisplayable) {
-                displayables.add((GUIDisplayable) i);
+            if (i instanceof AbstractGUIDisplayable) {
+                displayables.add((AbstractGUIDisplayable) i);
                 continue;
             }
             throw new IllegalArgumentException("The GUIObject: (" + i + ") is not compatible with the GUIHandler");
@@ -1231,29 +1254,33 @@ class GUIHandler {
     }
 
     // Add a single gui object to the GUIHandler
-    public void addGUIObject(GUIObject guiObject) {
-        ArrayList<GUIObject> toAdd = new ArrayList<GUIObject>(); 
+    public void addGUIObject(AbstractGUIObject guiObject) {
+        ArrayList<AbstractGUIObject> toAdd = new ArrayList<AbstractGUIObject>(); 
         toAdd.add(guiObject);
         addGUIObjects(toAdd);
     }
 
     // Updates all of the gui
     public void update() {
-        for (GUIClickable i : clickables) {
-            i.update();
+        for (AbstractGUIClickable i : clickables) {
+            if (i.getIsEnabled())
+                i.update();
         }
-        for (GUIDisplayable i : displayables) {
-            i.update();
+        for (AbstractGUIDisplayable i : displayables) {
+            if (i.getIsEnabled())
+                i.update();
         }
     }
 
     // Updates all of the gui drawing
     public void draw() {
-        for (GUIClickable i : clickables) {
-            i.draw();
+        for (AbstractGUIClickable i : clickables) {
+            if (i.getIsEnabled())
+                i.draw();
         }
-        for (GUIDisplayable i : displayables) {
-            i.draw();
+        for (AbstractGUIDisplayable i : displayables) {
+            if (i.getIsEnabled())
+                i.draw();
         }
     }
 }
