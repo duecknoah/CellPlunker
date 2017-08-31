@@ -561,6 +561,10 @@ class StateUpdater {
 
     // Update cells to be updated and clear the cells updated
     private void step() {
+        // Only update if we have something to update
+        if (cellsToBeUpdated.isEmpty())
+            return;
+        
         cellsUpdated.clear();
 
         HashMap<Position, CellUpdateInfo> toUpdate = cellsToBeUpdated;
