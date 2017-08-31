@@ -155,9 +155,16 @@ class Grid {
         gridShader.set("screen_dim", (float) width, (float) height);
         filter(gridShader);
 
-        // Draw each cell
-        for (int ix = 0; ix < xsize; ix ++) {
-            for (int iy = 0; iy < ysize; iy ++) {
+        // Draw each cell within the view
+        final Position TL, BR; // top left and bottom right of camera on the grid
+        TL = cam.screenToGridPos(new Position(0, 0));
+        Position screenOffset = cam.screenToGridPos(new Position(width, height));
+        BR = screenOffset;
+        
+        for (int ix = TL.x; ix < BR.x; ix ++) {
+            for (int iy = TL.y; iy < BR.y; iy ++) {
+                if (!inBounds(new Position(ix, iy)))
+                    continue;
                 // Draw using cells method if a cell exists there
                 if (cells[ix][iy] != null) {
                     if (viewCellStates) {
