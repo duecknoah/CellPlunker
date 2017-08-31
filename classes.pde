@@ -556,8 +556,8 @@ class StateUpdater {
     private void step() {
         cellsUpdated.clear();
 
-        HashMap<Position, CellUpdateInfo> toUpdate = new HashMap<Position, CellUpdateInfo>(cellsToBeUpdated);
-        cellsToBeUpdated.clear(); // clear, that way new things can be updated the next step
+        HashMap<Position, CellUpdateInfo> toUpdate = cellsToBeUpdated;
+        cellsToBeUpdated = new HashMap<Position, CellUpdateInfo>(); // clear, that way new things can be updated the next step
 
         Iterator it = toUpdate.entrySet().iterator();
         while (it.hasNext()) {

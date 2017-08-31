@@ -1,4 +1,4 @@
-abstract class Cell { //<>// //<>//
+abstract class Cell { //<>//
     public static final int onCol = #ffffff;
     public static final int offCol = 0;
     public final static int labelCol = #ff0000;
@@ -386,19 +386,17 @@ class SwitchCell extends Cell implements Interactable {
         final float bottomHeightPerc = 1 - topHeightPerc; // the percentage of the rest of the height to take up for the bottom
         final float topHeight = totalInnerHeight * topHeightPerc; // Actual height for top
         final float bottomHeight = totalInnerHeight * bottomHeightPerc; // Actual height for bottom
-        
+
         // Inner top drawing
         if (getState() == true) {
             fill(INNER_ON_COL);
-        }
-        else fill(INNER_OFF_COL);
+        } else fill(INNER_OFF_COL);
         noStroke();
         rect(pos.x + padding, pos.y + padding, totalInnerWidth, topHeight);
         // Inner bottom drawing
         if (getState() == true) {
             fill(INNER_OFF_COL);
-        }
-        else fill(INNER_ON_COL);
+        } else fill(INNER_ON_COL);
         noStroke();
         rect(pos.x + padding, pos.y + padding + topHeight, totalInnerWidth, bottomHeight);
     }
@@ -446,7 +444,6 @@ class CableUnit {
         // Lastly update the entire cables state
         for (CableCell c : cables) {
             c.setState(finalState);
-            stateUpdater.markCell(c, CellUpdateInfo.stateUpdate);
         }
     }
 
