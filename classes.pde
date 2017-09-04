@@ -362,6 +362,10 @@ class Grid {
     public void placeGridArea(Position tl, Grid placement) {
         int w = placement.getXSize();
         int h = placement.getYSize();
+        // A grid marked with true or false. 
+        // True marking that a cell was placed there
+        // False marking that a cell was not placed there
+        boolean placedCells[][] = new boolean[placement.getXSize()][placement.getYSize()];
 
         // Loop through each Cell in the grid and clear it, the paste in the Cells
         // from the placement[][] accordingly
@@ -375,14 +379,19 @@ class Grid {
                 if (toPlace != null) {
                     clearCell(gridPos);
                     setCell(toPlace, gridPos);
+                    placedCells[ix][iy] = true; // mark as a placed cell there
                 }
+                else placedCells[ix][iy] = false;
             }
         }
         // Lastly, do a second pass which will mark anything that will connect the cableunits properly
         for (int ix = 0; ix < w; ix ++) {
             for (int iy = 0; iy < h; iy ++) {
+                if (placedCells[ix][iy] == false)
+                    continue;
                 Position gridPos = new Position(tl.x + ix, tl.y + iy);
-                Cell c = cellAt(gridPos);
+                Position relativePos = new Position(ix, iy);
+                Cell c = placement.cellAt(relativePos);
 
                 if (c instanceof CableCell) {
                     CableCell cCable = (CableCell) c;
