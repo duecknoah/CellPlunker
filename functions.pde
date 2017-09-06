@@ -82,7 +82,7 @@ public void loadSelected(File fileSelected) {
         JSONObject saveData = loadJSONObject(fileSelected);
         try {
             grid.parseJSON(saveData.getJSONObject("grid"));
-            println("Save loaded successfully with no errors");
+            loadSuccessfulDisplay.setTo(fileSelected + " loaded");
         }
         catch (Exception e) {
             e.printStackTrace();

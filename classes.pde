@@ -1188,6 +1188,8 @@ class TextDisplay extends AbstractGUIDisplayable {
     public int fontSize;
     public color fontColor;
     public color backgroundColor = -1;
+    protected int halign;
+    protected int valign;
 
     TextDisplay(GUIPosition pos, float w, float h, String text) {
         this.pos = pos;
@@ -1196,34 +1198,54 @@ class TextDisplay extends AbstractGUIDisplayable {
         this.text = text;
         this.fontSize = 12;
         this.fontColor = #ffffff; // white
+        resetTextAlign();
     }
 
     TextDisplay(GUIPosition pos, float w, float h, String text, int fontSize, color fontColor) {
         this(pos, w, h, text);
         this.fontSize = fontSize;
         this.fontColor = fontColor;
+        resetTextAlign();
     }
 
     public void setBackgroundColor(color backgroundColor) {
         this.backgroundColor = backgroundColor;   
     }
-
+    
+    public void setTextAlign(int halign, int valign) {
+        this.halign = halign;
+        this.valign = valign;
+    }
+    
+    public void resetTextAlign() {
+        halign = BASELINE;
+        valign = TOP;
+    }
+    
     public void update() {
         pos.update();
     }
-
+    
     public void draw() {
+        draw(255); // default make it max alpha   
+    }
+    
+    public void draw(float alpha) {
         // Background
         if (backgroundColor != -1) {
-            fill(backgroundColor);
+            fill(backgroundColor, alpha);
             rect(pos.getX(), pos.getY(), w, h);
-            fill(fontColor);
+            fill(fontColor, alpha);
         }
         // Text
         textSize(fontSize);
+        textAlign(halign, valign);
+        fill(fontColor, alpha);
         text(text, pos.getX(), pos.getY(), w, h);
-        textSize(12); // reset
-        fill(255); // reset
+        // Reset
+        textAlign(BASELINE, TOP);
+        textSize(12);
+        fill(255);
     }
 }
 
@@ -1243,6 +1265,54 @@ class ImageDisplay extends AbstractGUIDisplayable {
     public void draw() {
         image(image, pos.getX(), pos.getY());
     }
+}
+
+// The same as TextDisplay, however it fades out over time, and then is removed from the gui once faded out.
+// Note that this is also in a set location (at the bottom of the screen)
+class NotificationTextDisplay extends TextDisplay {
+    private final float holdTime = 2.5; // the time (in seconds) to show before fading out the alpha
+    private float timer; // the current time (in seconds) this has been 'alive' for
+    private float alpha;
+    
+    NotificationTextDisplay(String text) {
+        super(new GUIPosition(-256, -64, CENTER, BOTTOM), 512, 512, text);
+        init();
+        fontSize = 16;
+    }
+    
+    public void setTo(String text) {
+         init();
+         this.text = text;
+    }
+    
+    // Initialize / reset to default
+    private void init() {
+        alpha = 255;
+        timer = holdTime;
+        setIsEnabled(true);
+        setTextAlign(CENTER, TOP);
+    }
+    
+    @Override
+    public void update() {
+        super.update();
+        // Tick down the timer
+        if (timer > 0) {
+            timer -= 1 / frameRate; 
+        }
+        else {
+            alpha -= 255 * (1 / frameRate);   
+        }
+        if (alpha <= 0) {
+            setIsEnabled(false);
+        }
+    }
+    
+    @Override
+    public void draw() {
+        super.draw(alpha);
+    }
+    
 }
 
 // This class handles all of the gui drawing and updating

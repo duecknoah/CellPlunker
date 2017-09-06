@@ -35,6 +35,7 @@ WindowWatcher windowWatcher = new WindowWatcher();
 // GUI references
 TextDisplay stepCounter;
 TextDisplay helpMenu;
+NotificationTextDisplay loadSuccessfulDisplay;
 
 void setup() {
     size(500, 500, P2D);
@@ -105,6 +106,8 @@ void setup() {
         + "'Scroll Up/Down' - zoom in/out", 14, #ffffff);
     helpMenu.setBackgroundColor(color(0, 0, 0, 127));
     guiObjects.add(helpMenu);
+    loadSuccessfulDisplay = new NotificationTextDisplay("CellPlunker loaded successfully");
+    guiObjects.add(loadSuccessfulDisplay);
     
     gui = new GUIHandler(guiObjects);
 }
