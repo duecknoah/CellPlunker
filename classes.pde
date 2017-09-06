@@ -384,7 +384,9 @@ class Grid {
                 else placedCells[ix][iy] = false;
             }
         }
-        // Lastly, do a second pass which will mark anything that will connect the cableunits properly
+        // Lastly, do a second pass which will find any placed Cables that have a null CableUnit and set up there
+        // CableUnit
+        ArrayList<CableUnit> totalCUnits = new ArrayList<CableUnit>();
         for (int ix = 0; ix < w; ix ++) {
             for (int iy = 0; iy < h; iy ++) {
                 if (placedCells[ix][iy] == false)
@@ -395,7 +397,13 @@ class Grid {
 
                 if (c instanceof CableCell) {
                     CableCell cCable = (CableCell) c;
-                    cCable.cellUpdate();
+                    // If this cables CableUnit has not been determined yet, then update it. This will also
+                    // Make any cells touching this cable join its cable unit. Therefore, those cells touching this 
+                    // one will join the CableUnit (or vise versa) and therefore not be a null CableUnit. This prevents
+                    // updating cells more than once
+                    if (cCable.getCableUnit() == null) {
+                        cCable.intialize();
+                    }
                 }
             }
         }

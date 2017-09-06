@@ -39,9 +39,8 @@ abstract class Cell { //<>//
     // InverterCells will only be counted if their state is true AND there orientation faces this cell (outputs to it)
     public Cell[] getStateNeighbors() {
         Cell[] stateNeighbors = getNeighbors();
-
-        int i = 0;
-        for (Cell n : stateNeighbors) {
+        for (int i = 0; i < 4; i ++) {
+            Cell n = stateNeighbors[i];
             if (n instanceof RotatableCell) {
                 RotatableCell n2 = (RotatableCell) n; 
                 // If this neighboring InverterCell is facing this, 
@@ -51,7 +50,6 @@ abstract class Cell { //<>//
                 }
                 stateNeighbors[i] = null; // don't count this
             }
-            i ++;
         }
         return stateNeighbors;
     }
@@ -323,7 +321,7 @@ class SwitchCell extends Cell implements Interactable {
     public final static int OUTER_COL = #001eff;
     public final static int INNER_ON_COL = #fff568;
     public final static int INNER_OFF_COL = #827b00;
-    
+
     SwitchCell (Position pos) {
         super(pos);
     }
@@ -405,7 +403,7 @@ class SwitchCell extends Cell implements Interactable {
 // Holds all data for a connected unit of cable cells, this way they update together.
 class CableUnit {
     public ArrayList<CableCell> cables; // the cable cells that form this cable unit 
-    private ArrayList<Cell> neighbors; // neighboring cells that are touching this cable unit
+    private ArrayList<Cell> neighbors; // neighboring cells that are touching this cable unit and could affect this units state
 
     CableUnit (ArrayList<CableCell> cables) {
         this.cables = cables;
@@ -464,14 +462,14 @@ class CableUnit {
                             neighbors.add(j);
                         }
                     } else {
-                        if (!cables.contains(j)) { // optimize
+                        if (!cables.contains((CableCell) j)) { // optimize
                             cables.add((CableCell) j);
                         }
                         if (j instanceof WirelessCableCell) {
                             WirelessCableCell jWireless = (WirelessCableCell) j;
                             if (jWireless.hasConnection()) {
                                 if (!cables.contains(jWireless.getConnection())) {
-                                    cables.add((WirelessCableCell) jWireless);
+                                    cables.add((WirelessCableCell) jWireless.getConnection());
                                 }
                             }
                         }
@@ -560,8 +558,10 @@ class CableUnit {
                     }
                 }
                 // Finally, mark this cell as checked while adding it to the CableUnit if it is not in another CableUnit
-                iCableUnit.cables.add(current);
-                current.cUnit = iCableUnit;
+                if (!iCableUnit.cables.contains(current)) {
+                    iCableUnit.cables.add(current);
+                    current.cUnit = iCableUnit;
+                }
             }
         }
     }
@@ -674,7 +674,7 @@ class CableCell extends Cell {
         protected CableCell makeCopy() {
         CableCell c = new CableCell(new Position(this.pos));
         c.state = this.state;
-        c.setCableUnit(new CableUnit(c)); // this is set to a new CableUnit with only itself in it as copying a cableCell's CableUnit would copy all the connected cells as well
+        c.setCableUnit(null); // this is set to null, gets determined later when being placed
         return c;
     }
 
@@ -722,8 +722,11 @@ class CableCell extends Cell {
         for (int i = 0; i < 4; i ++) {
             for (int j = i+1; j < 4; j ++) {
                 if (nCableUnit[i] == nCableUnit[j]) { // if two different neighbors share the same cableUnit, make one of the references null, as we don't want to recount the same cableunit
-                    nCableUnit[i] = null;
-                    j = 4; // makes i go onto the next one, as there is no point in comparing j with i since it i is now null
+                    // If both of them are not already null
+                    if (nCableUnit[i] != null) {
+                        nCableUnit[i] = null;
+                        j = 4; // makes i go onto the next one, as there is no point in comparing j with i since it i is now null
+                    }
                 }
             }
         }
@@ -852,7 +855,7 @@ class WirelessCableCell extends CableCell implements Interactable {
     @Override
         protected WirelessCableCell makeCopy() {
         WirelessCableCell c = new WirelessCableCell(new Position(this.pos));
-        c.setCableUnit(new CableUnit(c));
+        c.setCableUnit(null); // gets set to null for now, gets determined on placement
         c.state = this.state;
         // make it so the copied version is no longer connected to anything
         // This is done as we only want to copy this Cell, and we also don't want the
@@ -895,6 +898,10 @@ class WirelessCableCell extends CableCell implements Interactable {
         other.connectToOther(this);
         // Lastly, merge their cable units
         CableUnit unit = this.getCableUnit();
+        // If there is no CableUnit intialized for this WirelessCableCell, then don't try to merge any cableunits.
+        // This should only happen if this CableUnit was created via makeCopy() when copying a section of the grid.
+        if (unit == null)
+            return;
         try {
             unit.merge(other.getCableUnit());
         } 
