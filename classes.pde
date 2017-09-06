@@ -160,7 +160,7 @@ class Grid {
         TL = cam.screenToGridPos(new Position(0, 0));
         Position screenOffset = cam.screenToGridPos(new Position(width, height));
         BR = screenOffset;
-        
+
         for (int ix = TL.x; ix < BR.x; ix ++) {
             for (int iy = TL.y; iy < BR.y; iy ++) {
                 if (!inBounds(new Position(ix, iy)))
@@ -380,8 +380,7 @@ class Grid {
                     clearCell(gridPos);
                     setCell(toPlace, gridPos);
                     placedCells[ix][iy] = true; // mark as a placed cell there
-                }
-                else placedCells[ix][iy] = false;
+                } else placedCells[ix][iy] = false;
             }
         }
         // Lastly, do a second pass which will find any placed Cables that have a null CableUnit and set up there
@@ -581,7 +580,7 @@ class StateUpdater {
         // Only update if we have something to update
         if (cellsToBeUpdated.isEmpty())
             return;
-        
+
         cellsUpdated.clear();
 
         HashMap<Position, CellUpdateInfo> toUpdate = cellsToBeUpdated;
@@ -1209,27 +1208,27 @@ class TextDisplay extends AbstractGUIDisplayable {
     }
 
     public void setBackgroundColor(color backgroundColor) {
-        this.backgroundColor = backgroundColor;   
+        this.backgroundColor = backgroundColor;
     }
-    
+
     public void setTextAlign(int halign, int valign) {
         this.halign = halign;
         this.valign = valign;
     }
-    
+
     public void resetTextAlign() {
         halign = BASELINE;
         valign = TOP;
     }
-    
+
     public void update() {
         pos.update();
     }
-    
+
     public void draw() {
-        draw(255); // default make it max alpha   
+        draw(255); // default make it max alpha
     }
-    
+
     public void draw(float alpha) {
         // Background
         if (backgroundColor != -1) {
@@ -1273,18 +1272,18 @@ class NotificationTextDisplay extends TextDisplay {
     private final float holdTime = 3; // the time (in seconds) to show before fading out the alpha
     private float timer; // the current time (in seconds) this has been 'alive' for
     private float alpha;
-    
+
     NotificationTextDisplay(String text) {
         super(new GUIPosition(-256, -64, CENTER, BOTTOM), 512, 512, text);
         init();
         fontSize = 16;
     }
-    
+
     public void setTo(String text) {
-         init();
-         this.text = text;
+        init();
+        this.text = text;
     }
-    
+
     // Initialize / reset to default
     private void init() {
         alpha = 255;
@@ -1292,27 +1291,25 @@ class NotificationTextDisplay extends TextDisplay {
         setIsEnabled(true);
         setTextAlign(CENTER, TOP);
     }
-    
+
     @Override
-    public void update() {
+        public void update() {
         super.update();
         // Tick down the timer
         if (timer > 0) {
-            timer -= 1 / frameRate; 
-        }
-        else {
-            alpha -= 255 * (1 / frameRate);   
+            timer -= 1 / frameRate;
+        } else {
+            alpha -= 255 * (1 / frameRate);
         }
         if (alpha <= 0) {
             setIsEnabled(false);
         }
     }
-    
+
     @Override
-    public void draw() {
+        public void draw() {
         super.draw(alpha);
     }
-    
 }
 
 // This class handles all of the gui drawing and updating

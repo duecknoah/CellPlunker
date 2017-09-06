@@ -108,7 +108,7 @@ void setup() {
     guiObjects.add(helpMenu);
     loadSuccessfulDisplay = new NotificationTextDisplay("CellPlunker loaded successfully");
     guiObjects.add(loadSuccessfulDisplay);
-    
+
     gui = new GUIHandler(guiObjects);
 }
 
