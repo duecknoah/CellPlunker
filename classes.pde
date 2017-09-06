@@ -1270,7 +1270,7 @@ class ImageDisplay extends AbstractGUIDisplayable {
 // The same as TextDisplay, however it fades out over time, and then is removed from the gui once faded out.
 // Note that this is also in a set location (at the bottom of the screen)
 class NotificationTextDisplay extends TextDisplay {
-    private final float holdTime = 2.5; // the time (in seconds) to show before fading out the alpha
+    private final float holdTime = 3; // the time (in seconds) to show before fading out the alpha
     private float timer; // the current time (in seconds) this has been 'alive' for
     private float alpha;
     

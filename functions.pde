@@ -66,6 +66,7 @@ public void createSave() {
 
     // TODO, save as compressed file not in raw json
     saveJSONObject(saveData, "save.json");
+    loadSuccessfulDisplay.setTo("Saved to: " + new File(sketchPath() + "/save.json"));
 }
 
 // Button functions (clickEvent functions)
@@ -82,7 +83,7 @@ public void loadSelected(File fileSelected) {
         JSONObject saveData = loadJSONObject(fileSelected);
         try {
             grid.parseJSON(saveData.getJSONObject("grid"));
-            loadSuccessfulDisplay.setTo(fileSelected + " loaded");
+            loadSuccessfulDisplay.setTo("Loaded: " + fileSelected);
         }
         catch (Exception e) {
             e.printStackTrace();
